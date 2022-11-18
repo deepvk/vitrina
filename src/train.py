@@ -208,9 +208,7 @@ if __name__ == "__main__":
         type=str,
         default=f"resources/data/noisy_dataset.jsonl",
     )
-    parser.add_argument(
-        "--tokenizer", type=str, default=f"tokenizer"
-    )
+    parser.add_argument("--tokenizer", type=str, default=f"tokenizer")
     parser.add_argument("--max-seq-len", type=int, default=512)
     parser.add_argument("--max-slices-count-per-word", type=int, default=9)
     parser.add_argument("--font-size", type=int, default=15)

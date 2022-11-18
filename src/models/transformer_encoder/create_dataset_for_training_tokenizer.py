@@ -35,5 +35,5 @@ if __name__ == "__main__":
     parser.add_argument("--data", type=str, default="data/vk_toxic.jsonl")
     parser.add_argument("--random-seed", type=str, default=21)
     parser.add_argument("--test-size", type=float, default=0.1)
-    args=parser.parse_args()
+    args = parser.parse_args()
     main(data_path=args.data, test_size=args.test_size, random_seed=args.random_seed)

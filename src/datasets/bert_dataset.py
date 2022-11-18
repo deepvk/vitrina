@@ -12,7 +12,12 @@ from utils.utils import clean_text
 class BERTDataset(Dataset):
     PADDED_VECTORS = ["input_ids", "attention_mask", "token_type_ids"]
 
-    def __init__(self, labeled_texts: List[Dict[str, Union[str, int]]], tokenizer: str, max_seq_len: int = 512):
+    def __init__(
+        self,
+        labeled_texts: List[Dict[str, Union[str, int]]],
+        tokenizer: str,
+        max_seq_len: int = 512,
+    ):
         self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
         self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
@@ -28,7 +33,7 @@ class BERTDataset(Dataset):
             add_special_tokens=True,
             max_length=self.max_seq_len,
             truncation=True,
-            return_tensors="pt"
+            return_tensors="pt",
         )
 
         for key in BERTDataset.PADDED_VECTORS:
@@ -38,7 +43,9 @@ class BERTDataset(Dataset):
         return encoded_dict
 
     @staticmethod
-    def collate_function(batch: List[Dict[str, Union[torch.Tensor, int]]]) -> Dict[str, torch.Tensor]:
+    def collate_function(
+        batch: List[Dict[str, Union[torch.Tensor, int]]]
+    ) -> Dict[str, torch.Tensor]:
         key2values = defaultdict(list)
         for item in batch:
             for key, val in item.items():

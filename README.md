@@ -4,6 +4,8 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 
+![](https://sun9-45.userapi.com/impg/Xaog-F8ohf9_9SZr1Ka1dlTzJMiGNyY2rU_a3A/2w6Kj0eV9o0.jpg?size=2560x1322&quality=96&sign=fcc1c983de3f0b3ee206d63a9f0371b5&type=album)
+    
 ## Данные
 [Toxic Russian Comments](https://www.kaggle.com/datasets/alexandersemiletov/toxic-russian-comments) -- датасет одноклассников для задачи multi-label классификации токсичных комментариев. 
 Скачайте этот датасет и поместите в [`resources/data`](./resources/data).
@@ -90,6 +92,11 @@ python scripts/train_tokenizer.py --data=resources/data/noisy_dataset.jsonl --te
 python src/train.py
 ```
 
+Рекомендуется запускать на gpu.
+
+Для обучения необходимо указать аккаунт wandb. Можно вводить логи и пароль при запуске скрипта. Рекомендуется 
+экспортировать переменную среды окружения WANDB_API_KEY со значением вашего токена, который можно найти в настройках профиля на сайте [wandb](https://wandb.ai/site).
+
 _Параметры:_
 * `--data` -- путь к данным для обучения (_default:_ resources/data/noisy_dataset.jsonl)
 * `--max-seq-len` -- используется при создании датасетов. В случае vtr -- ограничение на количество слайсов, в случае классического трансформера -- на количество токенов. (_default_: 512)
@@ -112,7 +119,7 @@ _Параметры:_
 
 _Параметры для обучения vtr:_
 * `--max-slices-count-per-word` -- используется для ограничения на количество слайсов для одного слова. Подробнее изучить процесс обработки последовательности слов можно взглянув на изображение (_default:_ 9)
-![](`r https://sun9-43.userapi.com/impg/frHiG2LjSyGa9b3hVmhrDx678d3yoE6gAahe-w/kO7oP431eEg.jpg?size=2298x1322&quality=95&sign=fa872fbd34c5598b417954219cbdc076&type=album`)
+![](https://sun9-43.userapi.com/impg/frHiG2LjSyGa9b3hVmhrDx678d3yoE6gAahe-w/kO7oP431eEg.jpg?size=2298x1322&quality=95&sign=fa872fbd34c5598b417954219cbdc076&type=album)
 * `--font-size` -- размер шрифта, с которым генерируется изображение (_default:_ 15)
 * `--window-size` -- размер окна (_default:_ 30)
 * `--stride` -- размер шага окна
@@ -122,6 +129,9 @@ _Параметры для обучения vtr:_
 * `--nhead` -- количество голов слоя трансформера (_default:_ 12)
 * `--kernel-size` -- размер ядра свёртки (_default:_ 3)
 * `--num-layers` -- количество слоёв энкодера трансформера в модели визуальных представлений (_default:_ 1)
+
+Ознакомится с устройством свёрточной сети можно по изображению или коду [models/vtr/embedder.py](./models/vtr/embedder.py)
+![](https://sun9-34.userapi.com/impg/suUSIjpt59F0tJ0FHxb_DMFeEisaiZ5T-VVtUQ/aznqxB8LDUY.jpg?size=1696x1284&quality=95&sign=1b817b35df213b68ccf0ffef58189331&type=album)
 
 _Параметры для обучения одного слоя трансформера:_
 * `--tokenizer` -- путь к токенизатору, созданному скриптом [`scripts/train_tokenizer.py`](./scripts/train_tokenizer.py). (_default:_ )

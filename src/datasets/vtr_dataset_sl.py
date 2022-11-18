@@ -99,13 +99,10 @@ class VTRDatasetSL(Dataset):
 
             result["slices"].append(padded_words + [zero_word] * padding_in_word_count)
             result["tokens_mask"].append(
-                tokens_mask
-                + [0] * max_word_len_in_slices * padding_in_word_count
+                tokens_mask + [0] * max_word_len_in_slices * padding_in_word_count
             )
             result["labels"].append(labels + [-1] * padding_in_word_count)
-            result["words_mask"].append(
-                [1] * len(text) + [0] * padding_in_word_count
-            )
+            result["words_mask"].append([1] * len(text) + [0] * padding_in_word_count)
 
         torch_result = {
             "slices": torch.stack([torch.cat(text) for text in result["slices"]]),
@@ -119,10 +116,11 @@ class VTRDatasetSL(Dataset):
 
 
 if __name__ == "__main__":
-    labeled_texts = [{"text": [["|{ 0шk@", 0], ["н@", 0], ["0|<ошке", 0]], "label": 0}, {"text": [["длинношеее", 0], ["животное", 0]], "label": 0}]
+    labeled_texts = [
+        {"text": [["|{ 0шk@", 0], ["н@", 0], ["0|<ошке", 0]], "label": 0},
+        {"text": [["длинношеее", 0], ["животное", 0]], "label": 0},
+    ]
     dataset = VTRDatasetSL(labeled_texts, "fonts/NotoSans.ttf")
-    data_loader = DataLoader(
-        dataset, batch_size=2, collate_fn=dataset.collate_function
-    )
+    data_loader = DataLoader(dataset, batch_size=2, collate_fn=dataset.collate_function)
     batch = next(iter(data_loader))
     print(batch)

@@ -29,6 +29,7 @@ def get_conv_bn(
         nn.BatchNorm2d(out_channels),
     )
 
+
 def get_conv_bn_relu(
     in_channels: int,
     out_channels: int,
@@ -39,22 +40,41 @@ def get_conv_bn_relu(
 ):
     return nn.Sequential(
         get_conv_bn(in_channels, out_channels, kernel_size, padding, stride, dilation),
-        nn.ReLU()
+        nn.ReLU(),
     )
 
+
 class ResBlock(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int, padding: Union[int, str], stride: int, dilation: int):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        padding: Union[int, str],
+        stride: int,
+        dilation: int,
+    ):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
 
         self.blocks = nn.Sequential(
-            get_conv_bn_relu(in_channels, out_channels, kernel_size, padding, stride, dilation),
-            get_conv_bn(out_channels, out_channels, kernel_size, padding, stride, dilation)
+            get_conv_bn_relu(
+                in_channels, out_channels, kernel_size, padding, stride, dilation
+            ),
+            get_conv_bn(
+                out_channels, out_channels, kernel_size, padding, stride, dilation
+            ),
         )
-        self.shortcut = nn.Identity() if in_channels == out_channels else nn.Sequential(
-            nn.Conv2d(self.in_channels, self.out_channels, kernel_size=1, bias=False),
-            nn.BatchNorm2d(self.out_channels)
+        self.shortcut = (
+            nn.Identity()
+            if in_channels == out_channels
+            else nn.Sequential(
+                nn.Conv2d(
+                    self.in_channels, self.out_channels, kernel_size=1, bias=False
+                ),
+                nn.BatchNorm2d(self.out_channels),
+            )
         )
 
     def forward(self, x):
@@ -75,7 +95,7 @@ def get_res_block_with_pooling(
 ):
     return nn.Sequential(
         ResBlock(in_channels, out_channels, kernel_size, padding, stride, dilation),
-        nn.MaxPool2d(2)
+        nn.MaxPool2d(2),
     )
 
 
@@ -129,7 +149,7 @@ class VisualEmbedderSL(nn.Module):
         self.slice_conv = nn.Sequential(
             get_res_block_with_pooling(1, 64, kernel_size, padding="same"),
             get_res_block_with_pooling(64, 128, kernel_size, padding="same"),
-            get_res_block_with_pooling(128, out_channels, kernel_size, padding="same")
+            get_res_block_with_pooling(128, out_channels, kernel_size, padding="same"),
         )
 
         self.linear_bridge = nn.Linear(

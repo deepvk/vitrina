@@ -17,7 +17,7 @@ class Encoder(nn.Module):
             type_vocab_size=1,
             num_labels=1,
             hidden_dropout_prob=dropout,
-            attention_probs_dropout_prob=dropout
+            attention_probs_dropout_prob=dropout,
         )
         self.model = BertForSequenceClassification(model_config)
 
@@ -25,7 +25,7 @@ class Encoder(nn.Module):
         bert_output = self.model(
             input_ids=batch["input_ids"],
             attention_mask=batch["attention_mask"],
-            token_type_ids=batch["token_type_ids"]
+            token_type_ids=batch["token_type_ids"],
         )
 
         return bert_output["logits"].squeeze(1)
