@@ -206,7 +206,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data",
         type=str,
-        default=f"resources/data/noisy_insults.jsonl",
+        default=f"resources/data/noisy_dataset.jsonl",
     )
     parser.add_argument(
         "--tokenizer", type=str, default=f"tokenizer"

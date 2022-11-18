@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 from utils.slicer import VTRSlicer
-from utils.utils import clean_text, load_json
+from utils.utils import clean_text
 
 
 class VTRDatasetSL(Dataset):

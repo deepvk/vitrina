@@ -5,7 +5,7 @@ import torch
 from tokenizers.implementations import BertWordPieceTokenizer
 from torch.utils.data import Dataset, random_split
 
-from src.utils.utils import load_json
+from utils.utils import load_json
 
 
 class SimpleTextDataset(Dataset):
@@ -19,7 +19,7 @@ class SimpleTextDataset(Dataset):
         return self.data[item]
 
 
-def train_tokenizer(data_path: str, test_size: float, val_size: float, random_state: int, output_path: str):
+def train_tokenizer(data_path: str, test_size: float, val_size: float, random_state: int, save_to: str):
     bert_tokenizer = BertWordPieceTokenizer(
         unk_token="[UNK]",
         sep_token="[SEP]",
@@ -57,20 +57,20 @@ def train_tokenizer(data_path: str, test_size: float, val_size: float, random_st
                                        wordpieces_prefix="##",
                                        special_tokens=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"])
 
-    output_dir = Path(output_path)
+    output_dir = Path(save_to)
     if not output_dir.is_dir():
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    bert_tokenizer.save_model(output_path)
+    bert_tokenizer.save_model(save_to)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data", type=str, default=f"resources/data/insults.jsonl")
+    parser.add_argument("--data", type=str, default=f"resources/data/dataset.jsonl")
     parser.add_argument("--test-size", type=float, default=0.1)
     parser.add_argument("--val-size", type=float, default=0.1)
     parser.add_argument("--random-state", type=float, default=21)
-    parser.add_argument("--output", type=str, default=f"tokenizer")
+    parser.add_argument("--save-to", type=str, default=f"tokenizer")
 
     args = parser.parse_args()
     train_tokenizer(
@@ -78,5 +78,5 @@ if __name__ == "__main__":
         test_size=args.test_size,
         val_size=args.val_size,
         random_state=args.random_state,
-        output_path=args.output
+        save_to=args.save_to
     )

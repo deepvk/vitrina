@@ -74,7 +74,7 @@ def clusterization(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--font-path", type=str, default="fonts/NotoSans.ttf")
+    parser.add_argument("--font-path", type=str, default="resources/fonts/NotoSans.ttf")
     parser.add_argument("--font-size", type=int, default=13)
     parser.add_argument("--clusters", type=int, default=500)
     args = parser.parse_args()

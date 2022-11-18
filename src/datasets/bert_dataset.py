@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Union
 
 import torch
 from transformers import BertTokenizer
