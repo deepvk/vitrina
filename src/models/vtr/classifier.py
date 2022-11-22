@@ -60,12 +60,8 @@ class VisualToxicClassifier(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.classifier = nn.Linear(emb_size, 1)
 
-    def forward(
-        self, input_batch: Dict[str, torch.Tensor]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        embeddings = self.embedder(
-            input_batch["slices"]
-        )  # batch_size, seq_len, emb_size
+    def forward(self, input_batch: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+        embeddings = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
 
         embeddings = self.positional(embeddings)
         encoder_output = self.encoder(

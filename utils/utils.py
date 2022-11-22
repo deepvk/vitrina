@@ -13,9 +13,7 @@ morph = pymorphy2.MorphAnalyzer()
 _MENTION_REGEXP = re.compile(r"^\[id\d*|.*\],*\s*")
 _HTML_ESCAPE_CHR_REGEXP = re.compile(r"(&quot;)|(&lt;)|(&gt;)|(&amp;)|(&apos;)")
 _HTML_CODED_CHR_REGEXP = re.compile(r"(&#\d+;)")
-_URL_REGEXP = re.compile(
-    r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)"
-)
+_URL_REGEXP = re.compile(r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)")
 _BR_TOKEN_REGEXP = re.compile(r"<br>")
 _BOM_REGEXP = re.compile(r"\ufeff")
 _ZERO_WIDTH_SPACE_REGEXP = re.compile(r"\u200b")
@@ -77,9 +75,7 @@ def clean_text(text: str):
     return text
 
 
-def cosine_decay_scheduler(
-    final_steps: int = 300000, warm_steps: int = 3000
-) -> Callable[[int], float]:
+def cosine_decay_scheduler(final_steps: int = 300000, warm_steps: int = 3000) -> Callable[[int], float]:
     def scheduler(i: int):
         if i < warm_steps:
             lr_mult = float(i) / float(max(1, warm_steps))

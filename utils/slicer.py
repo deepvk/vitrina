@@ -24,25 +24,12 @@ class VTRSlicer:
 
         image_width = image_bytes.shape[1]
         padded_image_width = int(
-            (
-                (
-                    max(image_width, self.window_size)
-                    - self.window_size
-                    + self.stride
-                    - 1
-                )
-                // self.stride
-            )
-            * self.stride
+            ((max(image_width, self.window_size) - self.window_size + self.stride - 1) // self.stride) * self.stride
             + self.window_size
         )
 
-        image_bytes = F.pad(
-            image_bytes, (0, padded_image_width - image_width), "constant", 255
-        )
+        image_bytes = F.pad(image_bytes, (0, padded_image_width - image_width), "constant", 255)
         image_bytes = 255 - image_bytes
-        slices = image_bytes.unfold(1, self.window_size, self.stride).permute(
-            (1, 0, 2)
-        )[:max_slice_count]
+        slices = image_bytes.unfold(1, self.window_size, self.stride).permute((1, 0, 2))[:max_slice_count]
 
         return slices

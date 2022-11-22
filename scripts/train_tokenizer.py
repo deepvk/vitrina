@@ -27,7 +27,7 @@ def train_tokenizer(data_path: str, test_size: float, val_size: float, random_st
         clean_text=False,
         handle_chinese_chars=False,
         lowercase=False,
-        wordpieces_prefix="##"
+        wordpieces_prefix="##",
     )
 
     dataset = SimpleTextDataset(data_path)
@@ -45,17 +45,15 @@ def train_tokenizer(data_path: str, test_size: float, val_size: float, random_st
     val_dataset_size = int((val_size / (1 - test_size)) * train_dataset_size)
     train_dataset_size = train_dataset_size - val_dataset_size
     train_dataset, _ = random_split(
-        train_dataset,
-        [train_dataset_size, val_dataset_size],
-        generator=torch.Generator().manual_seed(random_state)
+        train_dataset, [train_dataset_size, val_dataset_size], generator=torch.Generator().manual_seed(random_state)
     )
 
     texts = list(map(lambda x: x["text"], train_dataset))
     print(texts[0])
 
-    bert_tokenizer.train_from_iterator(texts, vocab_size=30_000,
-                                       wordpieces_prefix="##",
-                                       special_tokens=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"])
+    bert_tokenizer.train_from_iterator(
+        texts, vocab_size=30_000, wordpieces_prefix="##", special_tokens=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"]
+    )
 
     output_dir = Path(save_to)
     if not output_dir.is_dir():
@@ -78,5 +76,5 @@ if __name__ == "__main__":
         test_size=args.test_size,
         val_size=args.val_size,
         random_state=args.random_state,
-        save_to=args.save_to
+        save_to=args.save_to,
     )

@@ -60,9 +60,7 @@ if __name__ == "__main__":
     labeled_texts = load_json("../../data/toxic_sl.jsonl")
     dataset = VTRDatasetSL(labeled_texts, "../fonts/NotoSans.ttf")
 
-    data_loader = DataLoader(
-        dataset, batch_size=2, collate_fn=VTRDatasetSL.collate_function
-    )
+    data_loader = DataLoader(dataset, batch_size=2, collate_fn=VTRDatasetSL.collate_function)
     batch = next(iter(data_loader))
     print(batch)
     print(model(batch))

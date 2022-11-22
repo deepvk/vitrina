@@ -13,11 +13,8 @@ RUSSIAN_LETTERS = "абвгдеёжзийклмнопрстуфхцчшщъыь�
 
 
 def clusterization(
-        font_path: str = "fonts/NotoSans.ttf",
-        font_size: int = 13,
-        clusters: int = 1000
-) -> Dict[
-    str, List[str]]:
+    font_path: str = "fonts/NotoSans.ttf", font_size: int = 13, clusters: int = 1000
+) -> Dict[str, List[str]]:
     face = freetype.Face(font_path)
     image_font = ImageFont.truetype(font_path, max(font_size - 2, 8))
 

@@ -21,11 +21,7 @@ def add_noise(
     for ch in text:
         replace = np.random.binomial(1, replacement_proba)
         lower_ch = ch.lower()
-        if (
-            replace
-            and lower_ch in similar_symbols
-            and len(similar_symbols[lower_ch]) != 0
-        ):
+        if replace and lower_ch in similar_symbols and len(similar_symbols[lower_ch]) != 0:
             symbols = list(similar_symbols[lower_ch])
             result += symbols[np.random.randint(len(symbols))]
         else:
@@ -57,10 +53,7 @@ def get_letter_replacements(level: int, add_points_and_stars: bool = False):
             clusters = json.load(json_file)
             for key in letter_replacement:
                 letter_replacement[key].extend(
-                    list(
-                        set(clusters[key]).union(set(clusters[key.upper()]))
-                        - set(letter_replacement[key])
-                    )
+                    list(set(clusters[key]).union(set(clusters[key.upper()])) - set(letter_replacement[key]))
                 )
     return letter_replacement
 
@@ -78,12 +71,8 @@ def generate(
 ):
     labeled_texts = load_json(data)
 
-    toxic_letter_replacement = get_letter_replacements(
-        level_toxic, add_points_and_stars=True
-    )
-    non_toxic_letter_replacement = get_letter_replacements(
-        level_non_toxic, add_points_and_stars=False
-    )
+    toxic_letter_replacement = get_letter_replacements(level_toxic, add_points_and_stars=True)
+    non_toxic_letter_replacement = get_letter_replacements(level_non_toxic, add_points_and_stars=False)
 
     toxic_dict = set()
     with open("resources/obscene_augmented.txt", "r") as dict_file:
@@ -123,18 +112,11 @@ def generate(
             if sl:
                 labeled_tokens.append((token_text, token_label))
             else:
-                if (
-                    token_ind != len(tokens) - 1
-                    and tokens[token_ind].stop != tokens[token_ind + 1].start
-                ):
+                if token_ind != len(tokens) - 1 and tokens[token_ind].stop != tokens[token_ind + 1].start:
                     token_text += " "
                 tokens[token_ind].text = token_text
 
-        labeled_text["text"] = (
-            labeled_tokens
-            if sl
-            else "".join(list(map(lambda substr: substr.text, tokens)))
-        )
+        labeled_text["text"] = labeled_tokens if sl else "".join(list(map(lambda substr: substr.text, tokens)))
 
     save_json(labeled_texts, save_to)
 

@@ -43,9 +43,7 @@ class BERTDataset(Dataset):
         return encoded_dict
 
     @staticmethod
-    def collate_function(
-        batch: List[Dict[str, Union[torch.Tensor, int]]]
-    ) -> Dict[str, torch.Tensor]:
+    def collate_function(batch: List[Dict[str, Union[torch.Tensor, int]]]) -> Dict[str, torch.Tensor]:
         key2values = defaultdict(list)
         for item in batch:
             for key, val in item.items():

@@ -25,26 +25,15 @@ class EncoderForSequenceLabeling(nn.Module):
         self.word_classifier = nn.Linear(hidden_size, 1)
 
     def forward(self, batch: Dict[str, Union[torch.Tensor, int]]):
-        bert_output = self.bert(
-            input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]
-        )
+        bert_output = self.bert(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"])
 
-        masked_output = (
-            bert_output["last_hidden_state"] * batch["attention_mask"][:, :, None]
-        )
+        masked_output = bert_output["last_hidden_state"] * batch["attention_mask"][:, :, None]
         batch_size, seq_len, hidden_size = masked_output.shape
         word_len = batch["max_word_len"]
-        word_split_output = masked_output.view(
-            batch_size, seq_len // word_len, word_len, hidden_size
-        )
-        tokens_count_in_each_word = (
-            batch["attention_mask"]
-            .view(batch_size, seq_len // word_len, word_len)
-            .sum(dim=2)
-        )
+        word_split_output = masked_output.view(batch_size, seq_len // word_len, word_len, hidden_size)
+        tokens_count_in_each_word = batch["attention_mask"].view(batch_size, seq_len // word_len, word_len).sum(dim=2)
         word_embeddings = (
-            torch.mean(word_split_output, 2)
-            / torch.max(torch.tensor(1), tokens_count_in_each_word)[:, :, None]
+            torch.mean(word_split_output, 2) / torch.max(torch.tensor(1), tokens_count_in_each_word)[:, :, None]
         )
         return self.word_classifier(word_embeddings).squeeze(2)
 

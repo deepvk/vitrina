@@ -22,9 +22,7 @@ class VTRDatasetSL(Dataset):
         max_slices_count_per_word: int = None,
     ):
         self.labeled_texts = labeled_texts
-        self.slicer = VTRSlicer(
-            font=font, font_size=font_size, window_size=window_size, stride=stride
-        )
+        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
         self.max_seq_len = max_seq_len
         self.max_slices_count_per_word = max_slices_count_per_word
         self.font_size = font_size
@@ -58,26 +56,20 @@ class VTRDatasetSL(Dataset):
             "labels": labels,
         }
 
-    def collate_function(
-        self, input_batch: List[Dict[str, torch.Tensor]]
-    ) -> Dict[str, Union[torch.Tensor, int]]:
+    def collate_function(self, input_batch: List[Dict[str, torch.Tensor]]) -> Dict[str, Union[torch.Tensor, int]]:
         key2values = defaultdict(list)
         max_word_len_in_slices = 0
         max_seq_len = 0
         for example in input_batch:
             slices = example["slices"]
             if len(slices) != 0:
-                max_word_len_in_slices = max(
-                    max_word_len_in_slices, max(map(len, slices))
-                )
+                max_word_len_in_slices = max(max_word_len_in_slices, max(map(len, slices)))
                 max_seq_len = max(max_seq_len, len(slices))
 
             key2values["slices"].append(slices)
             key2values["labels"].append(example["labels"])
 
-        zero_word = torch.zeros(
-            (max_word_len_in_slices, self.font_size, self.window_size)
-        )
+        zero_word = torch.zeros((max_word_len_in_slices, self.font_size, self.window_size))
 
         result = defaultdict(list)
         for text, labels in zip(key2values["slices"], key2values["labels"]):
@@ -98,9 +90,7 @@ class VTRDatasetSL(Dataset):
                 tokens_mask.extend([1] * len(word) + [0] * padding_size)
 
             result["slices"].append(padded_words + [zero_word] * padding_in_word_count)
-            result["tokens_mask"].append(
-                tokens_mask + [0] * max_word_len_in_slices * padding_in_word_count
-            )
+            result["tokens_mask"].append(tokens_mask + [0] * max_word_len_in_slices * padding_in_word_count)
             result["labels"].append(labels + [-1] * padding_in_word_count)
             result["words_mask"].append([1] * len(text) + [0] * padding_in_word_count)
 

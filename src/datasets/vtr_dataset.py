@@ -20,9 +20,7 @@ class VTRDataset(Dataset):
         max_seq_len: int = 512,
     ):
         self.labeled_texts = labeled_texts
-        self.slicer = VTRSlicer(
-            font=font, font_size=font_size, window_size=window_size, stride=stride
-        )
+        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
         self.max_seq_len = max_seq_len
 
     def __len__(self) -> int:
@@ -48,9 +46,7 @@ class VTRDataset(Dataset):
 
         return {
             "slices": pad_sequence(key2values["slices"], batch_first=True),
-            "attention_mask": pad_sequence(
-                key2values["attention_mask"], batch_first=True
-            ),
+            "attention_mask": pad_sequence(key2values["attention_mask"], batch_first=True),
             "labels": torch.tensor(key2values["labels"], dtype=torch.float),
         }
 
