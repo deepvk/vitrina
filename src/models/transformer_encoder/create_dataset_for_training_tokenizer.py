@@ -23,9 +23,9 @@ def main(data_path: str, test_size: float, random_seed: int):
         generator=torch.Generator().manual_seed(random_seed),
     )
 
-    train_labeled_texts = []
-    for lt in train_dataset:
-        train_labeled_texts.append(lt)
+    train_labeled_texts = [None] * train_dataset_size
+    for i in range(train_dataset_size):
+        train_labeled_texts[i] = train_dataset[i]
 
     save_json(train_labeled_texts, "data/train_tokenizer_rs21.jsonl")
 

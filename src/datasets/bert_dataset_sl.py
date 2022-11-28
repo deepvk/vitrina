@@ -6,10 +6,11 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from transformers import BertTokenizer
 
+from datasets.sized_collated_dataset import SizedCollatedDataset
 from utils.utils import clean_text, load_json
 
 
-class BERTDatasetSL(Dataset):
+class BERTDatasetSL(SizedCollatedDataset[Union[List[List[Union[str, int]]], int]]):
     PADDED_VECTORS = ["input_ids"]
 
     def __init__(
@@ -18,20 +19,20 @@ class BERTDatasetSL(Dataset):
         tokenizer: str,
         max_seq_len: int = 512,
     ):
+        super().__init__(labeled_texts)
         self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
-        self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
 
     def __len__(self):
         return len(self.labeled_texts)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> Dict[str, torch.Tensor]:
         labeled_text = self.labeled_texts[index]["text"]
 
         encoded_words = []
         labels = []
 
-        for word, label in labeled_text[:56]:
+        for word, label in labeled_text:
             cleaned_word = clean_text(word)
             if not cleaned_word:
                 continue
@@ -48,9 +49,11 @@ class BERTDatasetSL(Dataset):
             encoded_words.append(encoded_word)
             labels.append(label)
 
-        return {"words_input_ids": encoded_words, "labels": labels}
+        return {"words_input_ids": torch.cat(encoded_words), "labels": torch.tensor(labels)}
 
-    def collate_function(self, batch: List[Dict[str, Union[torch.Tensor, int]]]) -> Dict[str, torch.Tensor]:
+    def collate_function(
+        self, batch: List[Dict[str, torch.Tensor]]
+    ) -> Dict[str, torch.Tensor]:
         key2values = defaultdict(list)
         max_seq_len = 0
         max_word_len = 0
@@ -86,14 +89,22 @@ class BERTDatasetSL(Dataset):
 
             if len(words) > 0:
                 key2values["input_ids"].append(torch.cat(words)[:max_seq_len_in_tokens])
-                key2values["attention_mask"].append(torch.tensor(text_attention_mask)[:max_seq_len_in_tokens])
+                key2values["attention_mask"].append(
+                    torch.tensor(text_attention_mask)[:max_seq_len_in_tokens]
+                )
                 batch_labels.append(labels[:max_seq_len_in_words])
 
         return {
-            "max_word_len": max_word_len,
-            "input_ids": torch.nn.utils.rnn.pad_sequence(key2values["input_ids"], batch_first=True).long(),
-            "attention_mask": torch.nn.utils.rnn.pad_sequence(key2values["attention_mask"], batch_first=True).long(),
-            "labels": torch.nn.utils.rnn.pad_sequence(batch_labels, batch_first=True, padding_value=-1).long(),
+            "max_word_len": torch.tensor(max_word_len, dtype=torch.int32),
+            "input_ids": torch.nn.utils.rnn.pad_sequence(
+                key2values["input_ids"], batch_first=True
+            ).long(),
+            "attention_mask": torch.nn.utils.rnn.pad_sequence(
+                key2values["attention_mask"], batch_first=True
+            ).long(),
+            "labels": torch.nn.utils.rnn.pad_sequence(
+                batch_labels, batch_first=True, padding_value=-1
+            ).long(),
         }
 
 

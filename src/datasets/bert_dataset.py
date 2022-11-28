@@ -2,14 +2,14 @@ from collections import defaultdict
 from typing import List, Dict, Union
 
 import torch
-from transformers import BertTokenizer
 from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import Dataset
+from transformers import BertTokenizer
 
+from datasets.sized_collated_dataset import SizedCollatedDataset
 from utils.utils import clean_text
 
 
-class BERTDataset(Dataset):
+class BERTDataset(SizedCollatedDataset[Union[str, int]]):
     PADDED_VECTORS = ["input_ids", "attention_mask", "token_type_ids"]
 
     def __init__(
@@ -18,14 +18,14 @@ class BERTDataset(Dataset):
         tokenizer: str,
         max_seq_len: int = 512,
     ):
+        super().__init__(labeled_texts)
         self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
-        self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
 
     def __len__(self):
         return len(self.labeled_texts)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> Dict[str, torch.Tensor]:
         labeled_text = self.labeled_texts[index]
 
         encoded_dict = self.tokenizer(
@@ -42,8 +42,9 @@ class BERTDataset(Dataset):
 
         return encoded_dict
 
-    @staticmethod
-    def collate_function(batch: List[Dict[str, Union[torch.Tensor, int]]]) -> Dict[str, torch.Tensor]:
+    def collate_function(
+        self, batch: List[Dict[str, torch.Tensor]]
+    ) -> Dict[str, torch.Tensor]:
         key2values = defaultdict(list)
         for item in batch:
             for key, val in item.items():

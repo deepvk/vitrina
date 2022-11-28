@@ -1,7 +1,7 @@
 import json
 import math
 import re
-from typing import Dict, List, Any, Callable, Set
+from typing import Dict, List, Any, Callable, Set, Optional
 
 import pymorphy2
 import torch
@@ -13,7 +13,9 @@ morph = pymorphy2.MorphAnalyzer()
 _MENTION_REGEXP = re.compile(r"^\[id\d*|.*\],*\s*")
 _HTML_ESCAPE_CHR_REGEXP = re.compile(r"(&quot;)|(&lt;)|(&gt;)|(&amp;)|(&apos;)")
 _HTML_CODED_CHR_REGEXP = re.compile(r"(&#\d+;)")
-_URL_REGEXP = re.compile(r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)")
+_URL_REGEXP = re.compile(
+    r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)"
+)
 _BR_TOKEN_REGEXP = re.compile(r"<br>")
 _BOM_REGEXP = re.compile(r"\ufeff")
 _ZERO_WIDTH_SPACE_REGEXP = re.compile(r"\u200b")
@@ -51,11 +53,10 @@ def save_json(data: List[Any], filename: str) -> None:
 
 def dict_to_device(
     batch: Dict[str, torch.Tensor],
-    except_keys: Set[str] = None,
+    except_keys: Optional[Set[str]] = None,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ):
-    if except_keys is None:
-        except_keys = {}
+    except_keys: Set[str] = except_keys if except_keys is not None else set()
 
     for key, val in batch.items():
         if key in except_keys:
@@ -75,7 +76,9 @@ def clean_text(text: str):
     return text
 
 
-def cosine_decay_scheduler(final_steps: int = 300000, warm_steps: int = 3000) -> Callable[[int], float]:
+def cosine_decay_scheduler(
+    final_steps: int = 300000, warm_steps: int = 3000
+) -> Callable[[int], float]:
     def scheduler(i: int):
         if i < warm_steps:
             lr_mult = float(i) / float(max(1, warm_steps))

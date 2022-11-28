@@ -8,3 +8,4 @@ wandb~=0.13.5
 tqdm~=4.64.1
 tokenizers~=0.13.2
 Pillow
+types-ujson

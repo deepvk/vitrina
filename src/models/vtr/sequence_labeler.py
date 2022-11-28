@@ -2,11 +2,8 @@ from typing import Dict
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
 
-from datasets.vtr_dataset_sl import VTRDatasetSL
 from models.vtr.embedder import VisualEmbedderSL
-from utils.utils import load_json
 
 
 class VisualTextSequenceLabeler(nn.Module):
@@ -52,15 +49,3 @@ class VisualTextSequenceLabeler(nn.Module):
         over_all_batch = decoder_output.reshape(batch_size * max_seq_len, emb_size)
         class_logits = self.class_predictor(over_all_batch)
         return class_logits.view(batch_size, max_seq_len)
-
-
-if __name__ == "__main__":
-    model = VisualTextSequenceLabeler(15, 10)
-
-    labeled_texts = load_json("../../data/toxic_sl.jsonl")
-    dataset = VTRDatasetSL(labeled_texts, "../fonts/NotoSans.ttf")
-
-    data_loader = DataLoader(dataset, batch_size=2, collate_fn=VTRDatasetSL.collate_function)
-    batch = next(iter(data_loader))
-    print(batch)
-    print(model(batch))

@@ -3,10 +3,6 @@ from typing import Dict, Union
 import torch
 from torch import nn
 from torch.nn.functional import relu
-from torch.utils.data import DataLoader
-
-from datasets.vtr_dataset_sl import VTRDatasetSL
-from utils.utils import load_json
 
 
 def get_conv_bn(
@@ -59,14 +55,20 @@ class ResBlock(nn.Module):
         self.out_channels = out_channels
 
         self.blocks = nn.Sequential(
-            get_conv_bn_relu(in_channels, out_channels, kernel_size, padding, stride, dilation),
-            get_conv_bn(out_channels, out_channels, kernel_size, padding, stride, dilation),
+            get_conv_bn_relu(
+                in_channels, out_channels, kernel_size, padding, stride, dilation
+            ),
+            get_conv_bn(
+                out_channels, out_channels, kernel_size, padding, stride, dilation
+            ),
         )
         self.shortcut = (
             nn.Identity()
             if in_channels == out_channels
             else nn.Sequential(
-                nn.Conv2d(self.in_channels, self.out_channels, kernel_size=1, bias=False),
+                nn.Conv2d(
+                    self.in_channels, self.out_channels, kernel_size=1, bias=False
+                ),
                 nn.BatchNorm2d(self.out_channels),
             )
         )
@@ -110,7 +112,7 @@ class VisualEmbedder(nn.Module):
         )
 
         self.linear_bridge = nn.Linear(
-            (height // (2**3)) * (width // (2**3)) * out_channels,
+            (height // (2 ** 3)) * (width // (2 ** 3)) * out_channels,
             emb_size,
         )
 
@@ -121,7 +123,9 @@ class VisualEmbedder(nn.Module):
         # print("SHAPE", conv.shape)
         _, channels_count, h_out, w_out = conv.shape
 
-        batched_conv = conv.view(batch_size, slice_count, channels_count * h_out * w_out)
+        batched_conv = conv.view(
+            batch_size, slice_count, channels_count * h_out * w_out
+        )
         return self.linear_bridge(batched_conv)  # [batch size, slice count, emb size]
 
 
@@ -145,7 +149,7 @@ class VisualEmbedderSL(nn.Module):
         )
 
         self.linear_bridge = nn.Linear(
-            (height // (2**3)) * (width // (2**3)) * out_channels,
+            (height // (2 ** 3)) * (width // (2 ** 3)) * out_channels,
             emb_size,
         )
 
@@ -156,31 +160,26 @@ class VisualEmbedderSL(nn.Module):
         conv = self.slice_conv(slices.view(batch_size * slice_count, 1, height, width))
 
         _, channels_count, h_out, w_out = conv.shape
-        batched_conv = conv.view(batch_size, slice_count, channels_count * h_out * w_out)
-        slice_embeddings = self.linear_bridge(batched_conv)  # [batch size, slice count, emb size]
+        batched_conv = conv.view(
+            batch_size, slice_count, channels_count * h_out * w_out
+        )
+        slice_embeddings = self.linear_bridge(
+            batched_conv
+        )  # [batch size, slice count, emb size]
 
         masked_slice_embeddings = slice_embeddings * batch["tokens_mask"][:, :, None]
 
-        max_word_len = batch["max_word_len"]
+        max_word_len = int(batch["max_word_len"].item())
         masked_slice_embeddings_splitted_into_words = masked_slice_embeddings.view(
             batch_size, slice_count // max_word_len, max_word_len, self.emb_size
         )
         tokens_count_in_each_word = (
-            batch["tokens_mask"].view(batch_size, slice_count // max_word_len, max_word_len).sum(dim=2)
+            batch["tokens_mask"]
+            .view(batch_size, slice_count // max_word_len, max_word_len)
+            .sum(dim=2)
         )
         word_embeddings = (
             torch.mean(masked_slice_embeddings_splitted_into_words, 2)
             / torch.max(torch.tensor(1), tokens_count_in_each_word)[:, :, None]
         )
         return word_embeddings
-
-
-if __name__ == "__main__":
-    model = VisualEmbedderSL(15, 10)
-
-    labeled_texts = load_json("data/toxic_sl.jsonl")
-    dataset = VTRDatasetSL(labeled_texts, "fonts/NotoSans.ttf")
-    data_loader = DataLoader(dataset, batch_size=16, collate_fn=VTRDatasetSL.collate_function)
-    batch = next(iter(data_loader))
-
-    output = model(batch)

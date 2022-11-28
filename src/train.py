@@ -1,6 +1,6 @@
 import argparse
 import json
-from typing import Callable, Tuple
+from typing import Callable, Tuple, List, Dict, Union, Optional
 
 import torch
 import wandb
@@ -13,6 +13,7 @@ from transformers import get_linear_schedule_with_warmup
 
 from datasets.bert_dataset import BERTDataset
 from datasets.bert_dataset_sl import BERTDatasetSL
+from datasets.sized_collated_dataset import SizedCollatedDataset
 from datasets.vtr_dataset import VTRDataset
 from datasets.vtr_dataset_sl import VTRDatasetSL
 from models.transformer_encoder.encoder import Encoder
@@ -21,10 +22,12 @@ from models.transformer_encoder.encoder_for_sequence_labeling import (
 )
 from models.vtr.classifier import VisualToxicClassifier
 from models.vtr.sequence_labeler import VisualTextSequenceLabeler
-from utils.utils import dict_to_device
+from utils.utils import dict_to_device, load_json
 
 
-def split_dataset(dataset: Dataset, test_size: float, random_state: int) -> Tuple[Dataset, Dataset]:
+def split_dataset(
+    dataset: SizedCollatedDataset, test_size: float, random_state: int
+) -> Tuple[Dataset, Dataset]:
     dataset_size = len(dataset)
     test_dataset_size = int(test_size * dataset_size)
     train_dataset_size = dataset_size - test_dataset_size
@@ -39,7 +42,7 @@ def split_dataset(dataset: Dataset, test_size: float, random_state: int) -> Tupl
 
 def train(
     model: nn.Module,
-    dataset: Dataset,
+    dataset: SizedCollatedDataset,
     batch_size: int,
     epochs: int,
     test_size: float,
@@ -53,28 +56,34 @@ def train(
     beta1: float,
     beta2: float,
     sl: bool = False,
-    test_dataset: Dataset = None,
+    test_dataset: Optional[SizedCollatedDataset] = None,
     save_to: str = None,
     val: bool = False,
 ):
+    train_dataset_: Dataset
+    test_dataset_: Dataset
+
     if test_dataset is not None:
-        train_dataset = dataset
+        train_dataset_ = dataset
+        test_dataset_ = test_dataset
     else:
-        train_dataset, test_dataset = split_dataset(dataset, test_size, random_state)
-        train_dataset, val_dataset = split_dataset(dataset, val_size / (1 - test_size), random_state)
+        train_dataset_, test_dataset_ = split_dataset(dataset, test_size, random_state)
+        train_dataset_, val_dataset = split_dataset(
+            dataset, val_size / (1 - test_size), random_state
+        )
 
         if val:
-            test_dataset = val_dataset
+            test_dataset_ = val_dataset
 
     train_dataloader = DataLoader(
-        train_dataset,
+        train_dataset_,
         batch_size=batch_size,
         collate_fn=dataset.collate_function,
         num_workers=num_workers,
         shuffle=True,
     )
     test_dataloader = DataLoader(
-        test_dataset,
+        test_dataset_,
         batch_size=batch_size,
         collate_fn=dataset.collate_function,
         num_workers=num_workers,
@@ -87,7 +96,7 @@ def train(
 
     optimizer = AdamW(model.parameters(), lr, betas=(beta1, beta2))
 
-    num_training_steps = ((len(train_dataset) + batch_size - 1) // batch_size) * epochs
+    num_training_steps = len(train_dataloader) * epochs
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=warmup, num_training_steps=num_training_steps
     )
@@ -96,7 +105,9 @@ def train(
 
     batch_num = 0
 
-    wandb.watch(model, criterion, log="gradients", log_freq=50, idx=None, log_graph=(False))
+    wandb.watch(
+        model, criterion, log="gradients", log_freq=50, idx=None, log_graph=(False)
+    )
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -131,7 +142,11 @@ def train(
                     predictions = []
 
                     for test_batch in test_dataloader:
-                        output = model(dict_to_device(test_batch, except_keys={"max_word_len"}, device=device))
+                        output = model(
+                            dict_to_device(
+                                test_batch, except_keys={"max_word_len"}, device=device
+                            )
+                        )
                         true_labels = test_batch["labels"]
 
                         if sl:
@@ -148,9 +163,27 @@ def train(
                     predictions = torch.cat(predictions).numpy()
 
                     wandb.log({"accuracy": accuracy_score(ground_truth, predictions)})
-                    wandb.log({"precision": precision_score(ground_truth, predictions, zero_division=0)})
-                    wandb.log({"recall": recall_score(ground_truth, predictions, zero_division=0)})
-                    wandb.log({"f1": f1_score(ground_truth, predictions, pos_label=1, zero_division=0)})
+                    wandb.log(
+                        {
+                            "precision": precision_score(
+                                ground_truth, predictions, zero_division=0
+                            )
+                        }
+                    )
+                    wandb.log(
+                        {
+                            "recall": recall_score(
+                                ground_truth, predictions, zero_division=0
+                            )
+                        }
+                    )
+                    wandb.log(
+                        {
+                            "f1": f1_score(
+                                ground_truth, predictions, pos_label=1, zero_division=0
+                            )
+                        }
+                    )
 
                 model.train()
 
@@ -163,7 +196,7 @@ class BceLossForTokenClassification:
     def __init__(self):
         self.bce_loss = nn.BCEWithLogitsLoss(reduction="none")
 
-    def __call__(self, outputs: torch.Tensor, labels: torch.Tensor):
+    def __call__(self, outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         outputs = outputs.view(-1)
         labels = labels.view(-1).float()
         mask = (labels >= 0).float()
@@ -220,13 +253,23 @@ if __name__ == "__main__":
     else:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    dataset = None
-    model = None
-    criterion = None
+    labeled_texts = load_json(args.data)
 
-    create_dataset_f = None
+    test_labeled_data = None
+    if args.test_data is not None:
+        test_labeled_data = load_json(args.test_data)
+
+    model: nn.Module
+    criterion: Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+    dataset: SizedCollatedDataset
+    test_dataset: SizedCollatedDataset
+
     if args.sl:
         criterion = BceLossForTokenClassification()
+        create_dataset_sl_f: Callable[
+            [List[Dict[str, Union[List[List[Union[str, int]]], int]]]],
+            SizedCollatedDataset,
+        ]
         if not args.tokenizer:
             model = VisualTextSequenceLabeler(
                 height=args.font_size,
@@ -238,7 +281,7 @@ if __name__ == "__main__":
                 nhead=args.nhead,
                 dropout=args.dropout,
             )
-            create_dataset_f = lambda texts: VTRDatasetSL(
+            create_dataset_sl_f = lambda texts: VTRDatasetSL(
                 labeled_texts=texts,
                 font=args.font,
                 font_size=args.font_size,
@@ -249,13 +292,20 @@ if __name__ == "__main__":
             )
         else:
             model = EncoderForSequenceLabeling()
-            create_dataset_f = lambda texts: BERTDatasetSL(
-                labeled_texts,
+            create_dataset_sl_f = lambda texts: BERTDatasetSL(
+                texts,
                 args.tokenizer,
                 args.max_seq_len,
             )
+        dataset = create_dataset_sl_f(labeled_texts)
+        if test_labeled_data is not None:
+            test_dataset = create_dataset_sl_f(test_labeled_data)
     else:
         criterion = nn.BCEWithLogitsLoss()
+        create_dataset_f: Callable[
+            [List[Dict[str, Union[str, int]]]],
+            SizedCollatedDataset,
+        ]
         if not args.tokenizer:
             model = VisualToxicClassifier(
                 height=args.font_size,
@@ -277,20 +327,12 @@ if __name__ == "__main__":
             )
         else:
             model = Encoder(args.dropout)
-            create_dataset_f = lambda texts: BERTDataset(texts, args.tokenizer, args.max_seq_len)
-
-    with open(args.data) as train_file:
-        json_list = list(train_file)
-    labeled_texts = list(map(json.loads, json_list))
-
-    dataset = create_dataset_f(labeled_texts)
-
-    test_dataset = None
-    if args.test_data is not None:
-        with open(args.test_data) as test_file:
-            json_list = list(test_file)
-        labeled_texts = list(map(json.loads, json_list))
-        test_dataset = create_dataset_f(labeled_texts)
+            create_dataset_f = lambda texts: BERTDataset(
+                texts, args.tokenizer, args.max_seq_len
+            )
+        dataset = create_dataset_f(labeled_texts)
+        if test_labeled_data:
+            test_dataset = create_dataset_f(labeled_texts)
 
     train(
         model=model,
