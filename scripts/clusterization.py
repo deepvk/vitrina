@@ -10,11 +10,21 @@ from PIL import ImageFont, Image, ImageDraw
 from sklearn.cluster import MiniBatchKMeans
 
 RUSSIAN_LETTERS = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
+FONT_COLOR = "#000000"
+BACKGROUND_COLOR = "#FFFFFF"
 
 
 def clusterization(
-    font_path: str = "fonts/NotoSans.ttf", font_size: int = 13, clusters: int = 1000
+    font_path: str = "fonts/NotoSans.ttf", font_size: int = 13, clusters: int = 500
 ) -> Dict[str, List[str]]:
+    """
+    Clustering character images supported by a specified font.
+
+    :param font_path: the path to the font that needs to generate images (default: fonts/NotoSans.ttf).
+    :param font_size: font size in pixels (default: 13)
+    :param clusters: number of clusters into which to divide a set of character images (default: 500)
+    :return: a dictionaty {russian symbol: a list of symbols from the same cluster}
+    """
     face = freetype.Face(font_path)
     image_font = ImageFont.truetype(font_path, max(font_size - 2, 8))
 
@@ -25,16 +35,21 @@ def clusterization(
         max_len = max(max_len, line_height, line_width)
 
     letter_images_dirname = "letter_images"
-    all_images_dirname = f"{letter_images_dirname}/all"
+    all_images_dirname = os.path.join(letter_images_dirname, "all")
     if not os.path.exists(all_images_dirname):
         os.makedirs(all_images_dirname)
 
     char2image = {}
     for ind, c in enumerate(supported_chars):
-        image = Image.new("L", (max_len, max_len), color="#FFFFFF")
+        image = Image.new("L", (max_len, max_len), color=BACKGROUND_COLOR)
         draw = ImageDraw.Draw(image)
         w, h = draw.textsize(c, font=image_font)
-        draw.text(xy=((max_len - w) / 2, (max_len - h) / 2), text=c, fill="#000000", font=image_font)
+        draw.text(
+            xy=((max_len - w) / 2, (max_len - h) / 2),
+            text=c,
+            fill=FONT_COLOR,
+            font=image_font,
+        )
         image.save(f"{all_images_dirname}/{ind}.jpg")
         char2image[c] = image
 
@@ -64,7 +79,7 @@ def clusterization(
                 char2image[similar_letter].save(f"{letter_dir}/{similar_letter}.jpg")
 
     result = {ch: cluster2char[char2cluster[ch]] for ch in RUSSIAN_LETTERS + RUSSIAN_LETTERS.upper()}
-    with open("../resources/letter_replacement/clusterization.json", "w") as json_file:
+    with open("resources/letter_replacement/clusterization.json", "w") as json_file:
         json.dump(result, json_file, ensure_ascii=False)
     return result
 

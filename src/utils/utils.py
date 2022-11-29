@@ -1,8 +1,11 @@
 import json
 import math
+import os
+import random
 import re
 from typing import Dict, List, Any, Callable, Set, Optional
 
+import numpy as np
 import pymorphy2
 import torch
 import ujson
@@ -88,3 +91,18 @@ def cosine_decay_scheduler(final_steps: int = 300000, warm_steps: int = 3000) ->
 
 def lemmatize_word(word: str) -> str:
     return morph.parse(word)[0].normal_form.replace("ё", "е")
+
+
+def set_deterministic_mode(seed):
+    _set_seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    torch.backends.benchmark = False
+    torch.backends.cudnn.benchmark = False
+
+
+def _set_seed(seed: int):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)

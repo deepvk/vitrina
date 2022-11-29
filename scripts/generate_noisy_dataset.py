@@ -7,7 +7,7 @@ import numpy as np
 from razdel import tokenize
 
 from clusterization import clusterization
-from utils.utils import load_json, clean_text, save_json
+from src.utils.utils import load_json, clean_text, save_json
 
 
 def add_noise(
@@ -60,15 +60,40 @@ def get_letter_replacements(level: int, add_points_and_stars: bool = False):
 
 def generate(
     data: str,
-    level_toxic: int,
-    level_non_toxic: int,
-    p_toxic_word: float,
-    p_toxic_symbol: float,
-    p_space: float,
-    p_non_toxic_symbol: float,
-    sl: bool,
-    save_to: str,
+    level_toxic: int = 4,
+    level_non_toxic: int = 2,
+    p_toxic_word: float = 0.5,
+    p_toxic_symbol: float = 0.5,
+    p_space: float = 0.01,
+    p_non_toxic_symbol: float = 0.1,
+    sl: bool = False,
+    save_to: str = "resources/data/noisy_dataset.jsonl",
 ):
+    """
+    Generates a noisy dataset based on the original one.
+
+    The noise level can be adjusted with parameters. level-toxic and level-non-toxic define sets from which substitutions are taken for characters with a certain probability.
+    The values of these parameters can be {1, 2, 3, 4}. Each next level includes replacements from the previous one.
+
+    1 ‒ replacement with visually similar numbers
+
+    2 ‒ replacement with visually similar characters from the standard keyboard layout or from the Latin alphabet
+
+    3 ‒ replacement with visually similar character sequences
+
+    4 ‒ replacement with characters from the same cluster (see scripts/clusterization.py)
+
+    :param data: path to source dataset
+    :param level_toxic: noise level of toxic words (default: 4)
+    :param level_non_toxic: noise level of non-toxic words (default: 2)
+    :param p_toxic_word: probability of making changes to the toxic word (default: 0.5)
+    :param p_toxic_symbol: probability of changing a character in a toxic word (default: 0.5)
+    :param p_space: probability of adding a space after a character (default: 0.01)
+    :param p_non_toxic_symbol: probability of changing a character in a non-toxic word (default: 0.1)
+    :param sl: if the flag is set, then a dataset will be generated for the sequence labeling task (marking offensive words)
+    :param save_to: path to the file where the noisy dataset will be saved (default: resources/data/noisy_dataset.jsonl)
+    :return:
+    """
     labeled_texts = load_json(data)
 
     toxic_letter_replacement = get_letter_replacements(level_toxic, add_points_and_stars=True)

@@ -1,12 +1,12 @@
 from collections import defaultdict
-from typing import Any, Dict, List, Union
+from typing import Dict, List, Union
 
 import torch
 import torch.nn.functional as F
 
 from datasets.sized_collated_dataset import SizedCollatedDataset
-from utils.slicer import VTRSlicer
-from utils.utils import clean_text
+from src.utils.slicer import VTRSlicer
+from src.utils.utils import clean_text
 
 
 class VTRDatasetSL(SizedCollatedDataset[Union[List[List[Union[str, int]]], int]]):
@@ -28,16 +28,13 @@ class VTRDatasetSL(SizedCollatedDataset[Union[List[List[Union[str, int]]], int]]
         self.window_size = window_size
         self.test_dataset = False
 
-    def __len__(self) -> int:
-        return len(self.labeled_texts)
-
-    def __getitem__(self, index) -> Dict[str, Any]:
+    def __getitem__(self, index) -> Dict[str, List]:
         labeled_text = self.labeled_texts[index]
 
         slices = []
         labels = []
 
-        for word, label in labeled_text["text"][:56]:
+        for word, label in labeled_text["text"]:
             cleaned_word = clean_text(word)
             if not cleaned_word:
                 continue
@@ -93,15 +90,15 @@ class VTRDatasetSL(SizedCollatedDataset[Union[List[List[Union[str, int]]], int]]
 
             padded_slices.append(padded_words + [zero_word] * padding_in_word_count)
             result["tokens_mask"].append(tokens_mask + [0] * max_word_len_in_slices * padding_in_word_count)
-            labels_list.append(labels + [-1] * padding_in_word_count)
+            labels_list.extend(labels + [-1] * padding_in_word_count)
             result["words_mask"].append([1] * len(text) + [0] * padding_in_word_count)
 
         torch_result: Dict[str, torch.Tensor] = {
             "slices": torch.stack([torch.cat(text) for text in padded_slices]),
             "max_word_len": torch.tensor(max_word_len_in_slices),
-            "words_mask": torch.tensor(result["words_mask"]),
+            "words_mask": torch.tensor(result["words_mask"], dtype=torch.bool),
             "tokens_mask": torch.tensor(result["tokens_mask"]),
-            "labels": torch.cat(labels_list),
+            "labels": torch.tensor(labels_list),
         }
 
         return torch_result

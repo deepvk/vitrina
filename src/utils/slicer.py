@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from utils.utils import text2image
+from src.utils.utils import text2image
 
 
 class VTRSlicer:

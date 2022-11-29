@@ -3,7 +3,7 @@ from typing import Dict
 import torch
 from torch import nn
 
-from models.vtr.embedder import VisualEmbedderSL
+from src.models.vtr.embedder import VisualEmbedderSL
 
 
 class VisualTextSequenceLabeler(nn.Module):

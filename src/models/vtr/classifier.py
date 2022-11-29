@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 import torch
 from torch import nn
 
-from models.vtr.embedder import VisualEmbedder
+from src.models.vtr.embedder import VisualEmbedder
 
 
 class PositionalEncoding(nn.Module):

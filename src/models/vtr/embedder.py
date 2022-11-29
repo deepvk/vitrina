@@ -97,12 +97,19 @@ class VisualEmbedder(nn.Module):
         kernel_size: int = 3,
         emb_size: int = 768,
         out_channels: int = 256,
+        out_channels_res_block_1=64,
+        out_channels_res_block_2=128,
     ):
         super().__init__()
         self.slice_conv = nn.Sequential(
-            get_res_block_with_pooling(1, 64, kernel_size, padding="same"),
-            get_res_block_with_pooling(64, 128, kernel_size, padding="same"),
-            get_res_block_with_pooling(128, out_channels, kernel_size, padding="same"),
+            get_res_block_with_pooling(1, out_channels_res_block_1, kernel_size, padding="same"),
+            get_res_block_with_pooling(
+                out_channels_res_block_1,
+                out_channels_res_block_2,
+                kernel_size,
+                padding="same",
+            ),
+            get_res_block_with_pooling(out_channels_res_block_2, out_channels, kernel_size, padding="same"),
         )
 
         self.linear_bridge = nn.Linear(
@@ -114,7 +121,6 @@ class VisualEmbedder(nn.Module):
         batch_size, slice_count, height, width = slices.shape
         conv = self.slice_conv(slices.view(batch_size * slice_count, 1, height, width))
 
-        # print("SHAPE", conv.shape)
         _, channels_count, h_out, w_out = conv.shape
 
         batched_conv = conv.view(batch_size, slice_count, channels_count * h_out * w_out)
@@ -129,15 +135,22 @@ class VisualEmbedderSL(nn.Module):
         kernel_size: int = 3,
         emb_size: int = 768,
         out_channels: int = 256,
+        out_channels_res_block_1=64,
+        out_channels_res_block_2=128,
         dropout: float = 0,
     ):
         super().__init__()
         self.emb_size = emb_size
 
         self.slice_conv = nn.Sequential(
-            get_res_block_with_pooling(1, 64, kernel_size, padding="same"),
-            get_res_block_with_pooling(64, 128, kernel_size, padding="same"),
-            get_res_block_with_pooling(128, out_channels, kernel_size, padding="same"),
+            get_res_block_with_pooling(1, out_channels_res_block_1, kernel_size, padding="same"),
+            get_res_block_with_pooling(
+                out_channels_res_block_1,
+                out_channels_res_block_2,
+                kernel_size,
+                padding="same",
+            ),
+            get_res_block_with_pooling(out_channels_res_block_2, out_channels, kernel_size, padding="same"),
         )
 
         self.linear_bridge = nn.Linear(

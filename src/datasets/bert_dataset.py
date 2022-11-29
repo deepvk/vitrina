@@ -5,8 +5,8 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from transformers import BertTokenizer
 
-from datasets.sized_collated_dataset import SizedCollatedDataset
-from utils.utils import clean_text
+from src.datasets.sized_collated_dataset import SizedCollatedDataset
+from src.utils.utils import clean_text
 
 
 class BERTDataset(SizedCollatedDataset[Union[str, int]]):
@@ -22,10 +22,7 @@ class BERTDataset(SizedCollatedDataset[Union[str, int]]):
         self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
         self.max_seq_len = max_seq_len
 
-    def __len__(self):
-        return len(self.labeled_texts)
-
-    def __getitem__(self, index) -> Dict[str, torch.Tensor]:
+    def __getitem__(self, index) -> Dict[str, List]:
         labeled_text = self.labeled_texts[index]
 
         encoded_dict = self.tokenizer(
@@ -33,20 +30,16 @@ class BERTDataset(SizedCollatedDataset[Union[str, int]]):
             add_special_tokens=True,
             max_length=self.max_seq_len,
             truncation=True,
-            return_tensors="pt",
         )
 
-        for key in BERTDataset.PADDED_VECTORS:
-            encoded_dict[key] = encoded_dict[key].squeeze(0)
         encoded_dict["labels"] = labeled_text["label"]
-
         return encoded_dict
 
-    def collate_function(self, batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
+    def collate_function(self, batch: List[Dict[str, List]]) -> Dict[str, torch.Tensor]:
         key2values = defaultdict(list)
         for item in batch:
             for key, val in item.items():
-                key2values[key].append(val)
+                key2values[key].append(torch.tensor(val))
 
         padded_batch = {}
         for key in BERTDataset.PADDED_VECTORS:
