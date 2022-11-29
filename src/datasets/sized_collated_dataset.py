@@ -18,7 +18,5 @@ class SizedCollatedDataset(Dataset, Sized, Generic[T]):
     def __getitem__(self, index) -> Dict[str, torch.Tensor]:
         return self.labeled_texts[index]
 
-    def collate_function(
-        self, batch: List[Dict[str, torch.Tensor]]
-    ) -> Dict[str, torch.Tensor]:
+    def collate_function(self, batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         raise NotImplementedError()

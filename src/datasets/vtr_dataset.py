@@ -21,9 +21,7 @@ class VTRDataset(SizedCollatedDataset[Union[str, int]]):
         max_seq_len: int = 512,
     ):
         super().__init__(labeled_texts)
-        self.slicer = VTRSlicer(
-            font=font, font_size=font_size, window_size=window_size, stride=stride
-        )
+        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
         self.max_seq_len = max_seq_len
 
     def __len__(self) -> int:
@@ -48,8 +46,6 @@ class VTRDataset(SizedCollatedDataset[Union[str, int]]):
 
         return {
             "slices": pad_sequence(key2values["slices"], batch_first=True),
-            "attention_mask": pad_sequence(
-                key2values["attention_mask"], batch_first=True
-            ),
+            "attention_mask": pad_sequence(key2values["attention_mask"], batch_first=True),
             "labels": torch.tensor(key2values["labels"], dtype=torch.float),
         }

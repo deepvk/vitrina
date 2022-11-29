@@ -25,9 +25,7 @@ from models.vtr.sequence_labeler import VisualTextSequenceLabeler
 from utils.utils import dict_to_device, load_json
 
 
-def split_dataset(
-    dataset: SizedCollatedDataset, test_size: float, random_state: int
-) -> Tuple[Dataset, Dataset]:
+def split_dataset(dataset: SizedCollatedDataset, test_size: float, random_state: int) -> Tuple[Dataset, Dataset]:
     dataset_size = len(dataset)
     test_dataset_size = int(test_size * dataset_size)
     train_dataset_size = dataset_size - test_dataset_size
@@ -68,9 +66,7 @@ def train(
         test_dataset_ = test_dataset
     else:
         train_dataset_, test_dataset_ = split_dataset(dataset, test_size, random_state)
-        train_dataset_, val_dataset = split_dataset(
-            dataset, val_size / (1 - test_size), random_state
-        )
+        train_dataset_, val_dataset = split_dataset(dataset, val_size / (1 - test_size), random_state)
 
         if val:
             test_dataset_ = val_dataset
@@ -105,9 +101,7 @@ def train(
 
     batch_num = 0
 
-    wandb.watch(
-        model, criterion, log="gradients", log_freq=50, idx=None, log_graph=(False)
-    )
+    wandb.watch(model, criterion, log="gradients", log_freq=50, idx=None, log_graph=(False))
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -142,11 +136,7 @@ def train(
                     predictions = []
 
                     for test_batch in test_dataloader:
-                        output = model(
-                            dict_to_device(
-                                test_batch, except_keys={"max_word_len"}, device=device
-                            )
-                        )
+                        output = model(dict_to_device(test_batch, except_keys={"max_word_len"}, device=device))
                         true_labels = test_batch["labels"]
 
                         if sl:
@@ -163,27 +153,9 @@ def train(
                     predictions = torch.cat(predictions).numpy()
 
                     wandb.log({"accuracy": accuracy_score(ground_truth, predictions)})
-                    wandb.log(
-                        {
-                            "precision": precision_score(
-                                ground_truth, predictions, zero_division=0
-                            )
-                        }
-                    )
-                    wandb.log(
-                        {
-                            "recall": recall_score(
-                                ground_truth, predictions, zero_division=0
-                            )
-                        }
-                    )
-                    wandb.log(
-                        {
-                            "f1": f1_score(
-                                ground_truth, predictions, pos_label=1, zero_division=0
-                            )
-                        }
-                    )
+                    wandb.log({"precision": precision_score(ground_truth, predictions, zero_division=0)})
+                    wandb.log({"recall": recall_score(ground_truth, predictions, zero_division=0)})
+                    wandb.log({"f1": f1_score(ground_truth, predictions, pos_label=1, zero_division=0)})
 
                 model.train()
 
@@ -327,9 +299,7 @@ if __name__ == "__main__":
             )
         else:
             model = Encoder(args.dropout)
-            create_dataset_f = lambda texts: BERTDataset(
-                texts, args.tokenizer, args.max_seq_len
-            )
+            create_dataset_f = lambda texts: BERTDataset(texts, args.tokenizer, args.max_seq_len)
         dataset = create_dataset_f(labeled_texts)
         if test_labeled_data:
             test_dataset = create_dataset_f(labeled_texts)

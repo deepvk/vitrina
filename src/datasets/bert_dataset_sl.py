@@ -51,9 +51,7 @@ class BERTDatasetSL(SizedCollatedDataset[Union[List[List[Union[str, int]]], int]
 
         return {"words_input_ids": torch.cat(encoded_words), "labels": torch.tensor(labels)}
 
-    def collate_function(
-        self, batch: List[Dict[str, torch.Tensor]]
-    ) -> Dict[str, torch.Tensor]:
+    def collate_function(self, batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         key2values = defaultdict(list)
         max_seq_len = 0
         max_word_len = 0
@@ -89,22 +87,14 @@ class BERTDatasetSL(SizedCollatedDataset[Union[List[List[Union[str, int]]], int]
 
             if len(words) > 0:
                 key2values["input_ids"].append(torch.cat(words)[:max_seq_len_in_tokens])
-                key2values["attention_mask"].append(
-                    torch.tensor(text_attention_mask)[:max_seq_len_in_tokens]
-                )
+                key2values["attention_mask"].append(torch.tensor(text_attention_mask)[:max_seq_len_in_tokens])
                 batch_labels.append(labels[:max_seq_len_in_words])
 
         return {
             "max_word_len": torch.tensor(max_word_len, dtype=torch.int32),
-            "input_ids": torch.nn.utils.rnn.pad_sequence(
-                key2values["input_ids"], batch_first=True
-            ).long(),
-            "attention_mask": torch.nn.utils.rnn.pad_sequence(
-                key2values["attention_mask"], batch_first=True
-            ).long(),
-            "labels": torch.nn.utils.rnn.pad_sequence(
-                batch_labels, batch_first=True, padding_value=-1
-            ).long(),
+            "input_ids": torch.nn.utils.rnn.pad_sequence(key2values["input_ids"], batch_first=True).long(),
+            "attention_mask": torch.nn.utils.rnn.pad_sequence(key2values["attention_mask"], batch_first=True).long(),
+            "labels": torch.nn.utils.rnn.pad_sequence(batch_labels, batch_first=True, padding_value=-1).long(),
         }
 
 
