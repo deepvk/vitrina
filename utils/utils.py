@@ -54,10 +54,10 @@ def dict_to_device(
     except_keys: Optional[Set[str]] = None,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ):
-    except_keys: Set[str] = except_keys if except_keys is not None else set()
+    except_keys_set: Set[str] = except_keys if except_keys is not None else set()
 
     for key, val in batch.items():
-        if key in except_keys:
+        if key in except_keys_set:
             continue
         batch[key] = val.to(device)
     return batch
