@@ -24,19 +24,6 @@ from src.models.vtr.sequence_labeler import VisualTextSequenceLabeler
 from src.utils.utils import dict_to_device, load_json, set_deterministic_mode
 
 
-def split_dataset(dataset: SizedCollatedDataset, test_size: float, random_state: int) -> Tuple[Dataset, Dataset]:
-    dataset_size = len(dataset)
-    test_dataset_size = int(test_size * dataset_size)
-    train_dataset_size = dataset_size - test_dataset_size
-
-    train_dataset, test_dataset = random_split(
-        dataset,
-        [train_dataset_size, test_dataset_size],
-        generator=torch.Generator().manual_seed(random_state),
-    )
-    return train_dataset, test_dataset
-
-
 def train(
     train_data: str = "resources/data/train_dataset.jsonl",
     val_data: Optional[str] = "resources/data/val_dataset.jsonl",
@@ -103,12 +90,7 @@ def train(
     wandb.init(project="visual-text", entity="borisshapa")
     set_deterministic_mode(random_state)
 
-    actual_device: str
-    if device is not None:
-        actual_device = device
-    else:
-        actual_device = "cuda" if torch.cuda.is_available() else "cpu"
-
+    actual_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     labeled_texts = load_json(train_data)
 
     val_labeled_texts = None

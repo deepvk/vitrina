@@ -6,7 +6,7 @@ from typing import List, Dict
 import numpy as np
 from razdel import tokenize
 
-from clusterization import clusterization
+from scripts.clusterization import clusterization
 from src.utils.utils import load_json, clean_text, save_json
 
 

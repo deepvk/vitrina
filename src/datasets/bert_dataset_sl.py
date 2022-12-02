@@ -7,14 +7,15 @@ from transformers import BertTokenizer
 
 from src.datasets.sized_collated_dataset import SizedCollatedDataset
 from src.utils.utils import clean_text
+from utils.types import SlDatasetSample
 
 
-class BERTDatasetSL(SizedCollatedDataset[Union[List[List[Union[str, int]]], int]]):
+class BERTDatasetSL(SizedCollatedDataset[SlDatasetSample]):
     PADDED_VECTORS = ["input_ids"]
 
     def __init__(
         self,
-        labeled_texts: List[Dict[str, Union[List[List[Union[str, int]]], int]]],
+        labeled_texts: List[Dict[str, SlDatasetSample]],
         tokenizer: str,
         max_seq_len: int = 512,
     ):

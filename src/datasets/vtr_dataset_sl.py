@@ -4,15 +4,16 @@ from typing import Dict, List, Union
 import torch
 import torch.nn.functional as F
 
-from datasets.sized_collated_dataset import SizedCollatedDataset
+from src.datasets.sized_collated_dataset import SizedCollatedDataset
 from src.utils.slicer import VTRSlicer
 from src.utils.utils import clean_text
+from src.utils.types import SlDatasetSample
 
 
-class VTRDatasetSL(SizedCollatedDataset[Union[List[List[Union[str, int]]], int]]):
+class VTRDatasetSL(SizedCollatedDataset[SlDatasetSample]):
     def __init__(
         self,
-        labeled_texts: List[Dict[str, Union[List[List[Union[str, int]]], int]]],
+        labeled_texts: List[Dict[str, SlDatasetSample]],
         font: str,
         font_size: int = 15,
         window_size: int = 30,
@@ -52,7 +53,7 @@ class VTRDatasetSL(SizedCollatedDataset[Union[List[List[Union[str, int]]], int]]
             "labels": labels,
         }
 
-    def collate_function(self, input_batch: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
+    def collate_function(self, input_batch: List[Dict[str, List]]) -> Dict[str, torch.Tensor]:
         key2values = defaultdict(list)
         max_word_len_in_slices = 0
         max_seq_len = 0
