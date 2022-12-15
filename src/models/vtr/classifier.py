@@ -1,6 +1,5 @@
-from typing import Dict, Tuple
-
 import torch
+from loguru import logger
 from torch import nn
 
 from src.models.vtr.embedder import VisualEmbedder
@@ -40,6 +39,8 @@ class VisualToxicClassifier(nn.Module):
         dropout: float = 0,
     ):
         super().__init__()
+        logger.info(f"Initializing Visual Toxic Classifier | emb_size: {emb_size}, num_layers: {num_layers}")
+
         self.embedder = VisualEmbedder(
             height=height,
             width=width,
@@ -60,7 +61,7 @@ class VisualToxicClassifier(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.classifier = nn.Linear(emb_size, 1)
 
-    def forward(self, input_batch: Dict[str, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
         embeddings = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
 
         embeddings = self.positional(embeddings)

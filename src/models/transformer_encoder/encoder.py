@@ -1,6 +1,5 @@
-from typing import Dict
-
 import torch
+from loguru import logger
 from torch import nn
 from transformers import BertConfig, BertForSequenceClassification
 
@@ -18,6 +17,8 @@ class Encoder(nn.Module):
         dropout=0.0,
     ):
         super().__init__()
+        logger.info("Initializing vanilla BERT model for sequence classification")
+
         model_config = BertConfig(
             vocab_size=vocab_size,
             max_position_embeddings=max_position_embeddings,
@@ -31,7 +32,7 @@ class Encoder(nn.Module):
         )
         self.model = BertForSequenceClassification(model_config)
 
-    def forward(self, batch: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
         bert_output = self.model(
             input_ids=batch["input_ids"],
             attention_mask=batch["attention_mask"],

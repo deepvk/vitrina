@@ -1,6 +1,5 @@
-from typing import Dict
-
 import torch
+from loguru import logger
 from torch import nn
 
 from src.models.vtr.embedder import VisualEmbedderSL
@@ -19,13 +18,14 @@ class VisualTextSequenceLabeler(nn.Module):
         dropout: float = 0,
     ):
         super().__init__()
+        logger.info(f"Initializing Visual Text Sequence Labeler | emb_size: {emb_size}, num_layers: {num_layers}")
+
         self.embedder = VisualEmbedderSL(
             height=height,
             width=width,
             kernel_size=kernel_size,
             emb_size=emb_size,
             out_channels=out_channels,
-            dropout=dropout,
         )
 
         encoder_layer = nn.TransformerEncoderLayer(
@@ -38,7 +38,7 @@ class VisualTextSequenceLabeler(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.class_predictor = nn.Linear(emb_size, 1)
 
-    def forward(self, input_batch: Dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, input_batch: dict[str, torch.Tensor]) -> torch.Tensor:
         embeddings = self.embedder(input_batch)
 
         decoder_output = self.encoder(

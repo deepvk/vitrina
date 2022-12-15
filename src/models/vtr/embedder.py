@@ -1,6 +1,5 @@
-from typing import Dict, Union
-
 import torch
+from loguru import logger
 from torch import nn
 from torch.nn.functional import relu
 
@@ -9,7 +8,7 @@ def get_conv_bn(
     in_channels: int,
     out_channels: int,
     kernel_size: int,
-    padding: Union[int, str] = 0,
+    padding: int | str = 0,
     stride: int = 1,
     dilation: int = 1,
 ):
@@ -30,7 +29,7 @@ def get_conv_bn_relu(
     in_channels: int,
     out_channels: int,
     kernel_size: int,
-    padding: Union[int, str] = 0,
+    padding: int | str = 0,
     stride: int = 1,
     dilation: int = 1,
 ):
@@ -46,7 +45,7 @@ class ResBlock(nn.Module):
         in_channels: int,
         out_channels: int,
         kernel_size: int,
-        padding: Union[int, str],
+        padding: int | str,
         stride: int,
         dilation: int,
     ):
@@ -79,7 +78,7 @@ def get_res_block_with_pooling(
     in_channels: int,
     out_channels: int,
     kernel_size: int,
-    padding: Union[int, str] = 0,
+    padding: int | str = 0,
     stride: int = 1,
     dilation: int = 1,
 ):
@@ -101,6 +100,8 @@ class VisualEmbedder(nn.Module):
         out_channels_res_block_2=128,
     ):
         super().__init__()
+        logger.info(f"Initializing VisualEmbedder | kernel size: {kernel_size}, emb size: {emb_size}")
+
         self.slice_conv = nn.Sequential(
             get_res_block_with_pooling(1, out_channels_res_block_1, kernel_size, padding="same"),
             get_res_block_with_pooling(
@@ -127,7 +128,7 @@ class VisualEmbedder(nn.Module):
         return self.linear_bridge(batched_conv)  # [batch size, slice count, emb size]
 
 
-class VisualEmbedderSL(nn.Module):
+class VisualEmbedderSL(VisualEmbedder):
     def __init__(
         self,
         height: int,
@@ -137,42 +138,22 @@ class VisualEmbedderSL(nn.Module):
         out_channels: int = 256,
         out_channels_res_block_1=64,
         out_channels_res_block_2=128,
-        dropout: float = 0,
     ):
-        super().__init__()
-        self.emb_size = emb_size
-
-        self.slice_conv = nn.Sequential(
-            get_res_block_with_pooling(1, out_channels_res_block_1, kernel_size, padding="same"),
-            get_res_block_with_pooling(
-                out_channels_res_block_1,
-                out_channels_res_block_2,
-                kernel_size,
-                padding="same",
-            ),
-            get_res_block_with_pooling(out_channels_res_block_2, out_channels, kernel_size, padding="same"),
+        logger.info(f"Initializing VisualEmbedderSL")
+        super().__init__(
+            height, width, kernel_size, emb_size, out_channels, out_channels_res_block_1, out_channels_res_block_2
         )
 
-        self.linear_bridge = nn.Linear(
-            (height // (2**3)) * (width // (2**3)) * out_channels,
-            emb_size,
-        )
-
-    def forward(self, batch: Dict[str, torch.Tensor]):
+    def forward(self, batch: dict[str, torch.Tensor]):
         slices = batch["slices"]
-        batch_size, slice_count, height, width = slices.shape
-
-        conv = self.slice_conv(slices.view(batch_size * slice_count, 1, height, width))
-
-        _, channels_count, h_out, w_out = conv.shape
-        batched_conv = conv.view(batch_size, slice_count, channels_count * h_out * w_out)
-        slice_embeddings = self.linear_bridge(batched_conv)  # [batch size, slice count, emb size]
+        slice_embeddings = super(slices)  # [batch size, slice count, emb size]
+        batch_size, slice_count, emb_size = slice_embeddings.shape
 
         masked_slice_embeddings = slice_embeddings * batch["tokens_mask"][:, :, None]
 
         max_word_len = int(batch["max_word_len"].item())
         masked_slice_embeddings_splitted_into_words = masked_slice_embeddings.view(
-            batch_size, slice_count // max_word_len, max_word_len, self.emb_size
+            batch_size, slice_count // max_word_len, max_word_len, emb_size
         )
         tokens_count_in_each_word = (
             batch["tokens_mask"].view(batch_size, slice_count // max_word_len, max_word_len).sum(dim=2)
