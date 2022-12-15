@@ -1,13 +1,13 @@
 import argparse
 from dataclasses import dataclass
-from typing import Callable, Tuple, List, Dict, Union, Optional
+from typing import Callable, List, Dict, Union, Optional
 
 import torch
 import wandb
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch import nn
 from torch.optim import AdamW
-from torch.utils.data import DataLoader, random_split, Dataset
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
 
@@ -22,7 +22,7 @@ from src.models.transformer_encoder.encoder_for_sequence_labeling import (
 )
 from src.models.vtr.classifier import VisualToxicClassifier
 from src.models.vtr.sequence_labeler import VisualTextSequenceLabeler
-from src.utils.utils import dict_to_device, load_json, set_deterministic_mode
+from src.utils.common import dict_to_device, load_json, set_deterministic_mode
 
 LOSS = Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
 CREATE_DATASET_FN = Callable[[List], SizedCollatedDataset]
