@@ -1,8 +1,9 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from loguru import logger
 
-from src.utils.utils import text2image
+from src.utils.common import text2image
 
 
 class VTRSlicer:
@@ -13,6 +14,7 @@ class VTRSlicer:
         font: str = "fonts/NotoSans.ttf",
         font_size: int = 15,
     ):
+        logger.info(f"Init VTRSlicer | window_size={window_size}, stride={stride}, font={font}, font_size={font_size}")
         self.window_size = window_size
         self.stride = stride
         self.font = font
@@ -20,7 +22,7 @@ class VTRSlicer:
 
     def __call__(self, text: str, max_slice_count: int = None) -> torch.Tensor:
         image = text2image(text, font=self.font, font_size=self.font_size)
-        image_bytes = torch.from_numpy(np.asarray(image)).float()
+        image_bytes = torch.as_tensor(np.array(image))
 
         image_width = image_bytes.shape[1]
         padded_image_width = int(

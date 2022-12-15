@@ -1,29 +1,33 @@
 from collections import defaultdict
-from typing import List, Dict, Union
 
 import torch
 import torch.nn.functional as F
+from loguru import logger
+from torch.utils.data import Dataset
 from transformers import BertTokenizer
 
-from src.datasets.sized_collated_dataset import SizedCollatedDataset
-from src.utils.utils import clean_text
-from utils.types import SlDatasetSample
+from src.utils.common import clean_text
+from src.utils.types import SlDatasetSample
 
 
-class BERTDatasetSL(SizedCollatedDataset[SlDatasetSample]):
-    PADDED_VECTORS = ["input_ids"]
-
+class BERTDatasetSL(Dataset):
     def __init__(
         self,
-        labeled_texts: List[Dict[str, SlDatasetSample]],
+        labeled_texts: list[dict[str, SlDatasetSample]],
         tokenizer: str,
         max_seq_len: int = 512,
     ):
-        super().__init__(labeled_texts)
-        self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
+        logger.info(f"Initializing BERTDatasetSL with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
+        self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
 
-    def __getitem__(self, index) -> Dict[str, List]:
+        logger.info(f"Loading tokenizer from {tokenizer}")
+        self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
+
+    def __len__(self) -> int:
+        return len(self.labeled_texts)
+
+    def __getitem__(self, index: int) -> dict[str, list]:
         labeled_text = self.labeled_texts[index]["text"]
 
         encoded_words = []
@@ -47,8 +51,8 @@ class BERTDatasetSL(SizedCollatedDataset[SlDatasetSample]):
 
         return {"words_input_ids": encoded_words, "labels": labels}
 
-    def collate_function(self, batch: List[Dict[str, List]]) -> Dict[str, torch.Tensor]:
-        key2values: Dict[str, List[torch.Tensor]] = defaultdict(list)
+    def collate_function(self, batch: list[dict[str, list]]) -> dict[str, torch.Tensor]:
+        key2values: dict[str, list[torch.Tensor]] = defaultdict(list)
         max_seq_len = 0
         max_word_len = 0
         for item in batch:

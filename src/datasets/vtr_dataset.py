@@ -1,48 +1,52 @@
-from collections import defaultdict
-from typing import Dict, List, Union
 import torch
-
-from src.datasets.sized_collated_dataset import SizedCollatedDataset
-
+from loguru import logger
 from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import Dataset
 
+from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer
-from src.utils.utils import clean_text
 
 
-class VTRDataset(SizedCollatedDataset[Union[str, int]]):
+class VTRDataset(Dataset):
     def __init__(
         self,
-        labeled_texts: List[Dict[str, Union[str, int]]],
+        labeled_texts: list[dict[str, str | int]],
         font: str,
         font_size: int = 15,
         window_size: int = 30,
         stride: int = 5,
         max_seq_len: int = 512,
     ):
-        super().__init__(labeled_texts)
-        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
+        logger.info(f"Initializing VTRDataset with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
+        self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
 
-    def __getitem__(self, index) -> Dict[str, List]:
-        labeled_text = self.labeled_texts[index]
+        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
 
-        slices = self.slicer(clean_text(labeled_text["text"]))
+    def __len__(self) -> int:
+        return len(self.labeled_texts)
+
+    def __getitem__(self, index) -> tuple[torch.Tensor, int]:
+        sample = self.labeled_texts[index]
+        raw_text = clean_text(sample["text"])
+
+        # [n slices; font size; window size]
+        slices = self.slicer(raw_text)
         slices = slices[: self.max_seq_len]
-        return {
-            "slices": slices.tolist(),
-            "attention_mask": [1] * slices.shape[0],
-            "labels": labeled_text["label"],
-        }
 
-    def collate_function(self, batch: List[Dict[str, List]]) -> Dict[str, torch.Tensor]:
-        key2values = defaultdict(list)
-        for example in batch:
-            for key, val in example.items():
-                key2values[key].append(torch.tensor(val))
+        return slices, sample["label"]
 
-        return {
-            "slices": pad_sequence(key2values["slices"], batch_first=True),
-            "attention_mask": pad_sequence(key2values["attention_mask"], batch_first=True),
-            "labels": torch.cat(key2values["labels"]),
-        }
+    def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
+        slices = [item[0] for item in batch]
+        labels = [item[1] for item in batch]
+
+        # [batch size; most slices; font size; window size]
+        batched_slices = pad_sequence(slices, batch_first=True, padding_value=0)
+        bs, ms, _, _ = batched_slices.shape
+
+        # [batch size; most slices]
+        attention_mask = torch.zeros((bs, ms), dtype=torch.long)
+        for i, s in enumerate(slices):
+            attention_mask[i, : len(s)] = 1
+
+        return {"slices": batched_slices, "attention_mask": attention_mask, "labels": torch.tensor(labels)}

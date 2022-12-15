@@ -1,19 +1,19 @@
 from collections import defaultdict
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
+from loguru import logger
 
-from src.datasets.sized_collated_dataset import SizedCollatedDataset
+from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer
-from src.utils.utils import clean_text
 from src.utils.types import SlDatasetSample
 
 
-class VTRDatasetSL(SizedCollatedDataset[SlDatasetSample]):
+class VTRDatasetSL:
     def __init__(
         self,
-        labeled_texts: List[Dict[str, SlDatasetSample]],
+        labeled_texts: list[dict[str, SlDatasetSample]],
         font: str,
         font_size: int = 15,
         window_size: int = 30,
@@ -21,15 +21,20 @@ class VTRDatasetSL(SizedCollatedDataset[SlDatasetSample]):
         max_seq_len: int = 512,
         max_slices_count_per_word: int = None,
     ):
-        super().__init__(labeled_texts)
-        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
+        logger.info(f"Initializing VTRDatasetSL with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
+        self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
+
+        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
+
         self.max_slices_count_per_word = max_slices_count_per_word
         self.font_size = font_size
         self.window_size = window_size
-        self.test_dataset = False
 
-    def __getitem__(self, index) -> Dict[str, List]:
+    def __len__(self) -> int:
+        return len(self.labeled_texts)
+
+    def __getitem__(self, index: int) -> dict[str, list]:
         labeled_text = self.labeled_texts[index]
 
         slices = []
@@ -48,10 +53,7 @@ class VTRDatasetSL(SizedCollatedDataset[SlDatasetSample]):
         slices = slices[: self.max_seq_len]
         labels = labels[: self.max_seq_len]
 
-        return {
-            "slices": slices,
-            "labels": labels,
-        }
+        return {"slices": slices, "labels": labels}
 
     def collate_function(self, input_batch: List[Dict[str, List]]) -> Dict[str, torch.Tensor]:
         key2values = defaultdict(list)

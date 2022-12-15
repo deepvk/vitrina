@@ -1,48 +1,46 @@
-from collections import defaultdict
-from typing import List, Dict, Union
-
 import torch
-from torch.nn.utils.rnn import pad_sequence
+from loguru import logger
+from torch.utils.data import Dataset
 from transformers import BertTokenizer
 
-from src.datasets.sized_collated_dataset import SizedCollatedDataset
-from src.utils.utils import clean_text
+from src.utils.common import clean_text
 
 
-class BERTDataset(SizedCollatedDataset[Union[str, int]]):
-    PADDED_VECTORS = ["input_ids", "attention_mask", "token_type_ids"]
-
+class BERTDataset(Dataset):
     def __init__(
         self,
-        labeled_texts: List[Dict[str, Union[str, int]]],
+        labeled_texts: list[dict[str, str | int]],
         tokenizer: str,
         max_seq_len: int = 512,
     ):
-        super().__init__(labeled_texts)
-        self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
+        logger.info(f"Initializing BERTDataset with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
+        self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
 
-    def __getitem__(self, index) -> Dict[str, List]:
-        labeled_text = self.labeled_texts[index]
+        logger.info(f"Loading tokenizer from {tokenizer}")
+        self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
 
-        encoded_dict = self.tokenizer(
-            clean_text(labeled_text["text"]),
+    def __len__(self) -> int:
+        return len(self.labeled_texts)
+
+    def __getitem__(self, index: int) -> tuple[str, int]:
+        labeled_text = self.labeled_texts[index]
+        raw_text = clean_text(labeled_text["text"])
+        label = labeled_text["label"]
+        return raw_text, label
+
+    def collate_function(self, batch: list[tuple[str, int]]) -> dict[str, torch.Tensor]:
+        texts = [item[0] for item in batch]
+        labels = [item[1] for item in batch]
+
+        tokenized_batch = self.tokenizer(
+            texts,
             add_special_tokens=True,
             max_length=self.max_seq_len,
             truncation=True,
+            padding=True,
+            return_tensors="pt",
         )
+        tokenized_batch["labels"] = torch.tensor(labels)
 
-        encoded_dict["labels"] = labeled_text["label"]
-        return encoded_dict
-
-    def collate_function(self, batch: List[Dict[str, List]]) -> Dict[str, torch.Tensor]:
-        key2values = defaultdict(list)
-        for item in batch:
-            for key, val in item.items():
-                key2values[key].append(torch.tensor(val))
-
-        padded_batch = {}
-        for key in BERTDataset.PADDED_VECTORS:
-            padded_batch[key] = pad_sequence(key2values[key], batch_first=True)
-        padded_batch["labels"] = torch.tensor(key2values["labels"], dtype=torch.float)
-        return padded_batch
+        return tokenized_batch
