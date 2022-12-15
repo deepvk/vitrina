@@ -99,7 +99,6 @@ def lemmatize_word(word: str) -> str:
 def set_deterministic_mode(seed: int):
     _set_seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
-    torch.backends.benchmark = False
     torch.backends.cudnn.benchmark = False
 
 

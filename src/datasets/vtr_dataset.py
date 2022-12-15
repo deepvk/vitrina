@@ -3,6 +3,7 @@ from loguru import logger
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
+from src.datasets.common import DatasetSample
 from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer
 
@@ -10,7 +11,7 @@ from src.utils.slicer import VTRSlicer
 class VTRDataset(Dataset):
     def __init__(
         self,
-        labeled_texts: list[dict[str, str | int]],
+        labeled_texts: list[DatasetSample],
         font: str,
         font_size: int = 15,
         window_size: int = 30,

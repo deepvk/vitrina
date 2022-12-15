@@ -6,13 +6,13 @@ from loguru import logger
 
 from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer
-from src.datasets.common import SlDatasetSample
+from src.datasets.common import SLDatasetSample
 
 
 class VTRDatasetSL:
     def __init__(
         self,
-        labeled_texts: list[SlDatasetSample],
+        labeled_texts: list[SLDatasetSample],
         font: str,
         font_size: int = 15,
         window_size: int = 30,

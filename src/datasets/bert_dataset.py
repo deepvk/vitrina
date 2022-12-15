@@ -3,13 +3,14 @@ from loguru import logger
 from torch.utils.data import Dataset
 from transformers import BertTokenizer
 
+from src.datasets.common import DatasetSample
 from src.utils.common import clean_text
 
 
 class BERTDataset(Dataset):
     def __init__(
         self,
-        labeled_texts: list[dict[str, str | int]],
+        labeled_texts: list[DatasetSample],
         tokenizer: str,
         max_seq_len: int = 512,
     ):

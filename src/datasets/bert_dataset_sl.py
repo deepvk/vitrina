@@ -6,14 +6,14 @@ from loguru import logger
 from torch.utils.data import Dataset
 from transformers import BertTokenizer
 
+from src.datasets.common import SLDatasetSample
 from src.utils.common import clean_text
-from src.datasets.common import SlDatasetSample
 
 
 class BERTDatasetSL(Dataset):
     def __init__(
         self,
-        labeled_texts: list[SlDatasetSample],
+        labeled_texts: list[SLDatasetSample],
         tokenizer: str,
         max_seq_len: int = 512,
     ):
@@ -28,7 +28,7 @@ class BERTDatasetSL(Dataset):
         return len(self.labeled_texts)
 
     def __getitem__(self, index: int) -> dict[str, list]:
-        labeled_text = self.labeled_texts[index]["text"]
+        labeled_text: list[tuple[str, int]] = self.labeled_texts[index]["text"]
 
         encoded_words = []
         labels = []
