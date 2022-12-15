@@ -10,7 +10,7 @@ from src.utils.common import load_json, clean_text, save_json
 
 
 CLUSTERIZATION_FILE = "resources/letter_replacement/clusterization.json"
-REPLACEMENT_FILE_TEMPLATE = "resources/letter_replacement/letters%s.json"
+REPLACEMENT_FILE_TEMPLATE = "resources/letter_replacement/letters{}.json"
 OBSCENE_AUGMENTED_FILE = "resources/obscene_augmented.txt"
 
 
