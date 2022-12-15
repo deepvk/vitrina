@@ -1,18 +1,22 @@
 import argparse
 import json
 import os.path
-from typing import List, Dict
 
 import numpy as np
 from razdel import tokenize
 
 from scripts.clusterization import clusterization
-from src.utils.utils import load_json, clean_text, save_json
+from src.utils.common import load_json, clean_text, save_json
+
+
+CLUSTERIZATION_FILE = "resources/letter_replacement/clusterization.json"
+REPLACEMENT_FILE_TEMPLATE = "resources/letter_replacement/letters%s.json"
+OBSCENE_AUGMENTED_FILE = "resources/obscene_augmented.txt"
 
 
 def add_noise(
     text: str,
-    similar_symbols: Dict[str, List[str]],
+    similar_symbols: dict[str, list[str]],
     replacement_proba: float,
     add_space_proba: float = 0,
 ) -> str:
@@ -36,7 +40,7 @@ def get_letter_replacements(level: int, add_points_and_stars: bool = False):
     letter_replacement = {}
 
     if level > 0:
-        replacement_file = f"resources/letter_replacement/letters{min(3, level)}.json"
+        replacement_file = REPLACEMENT_FILE_TEMPLATE.format(min(level, 3))
         with open(replacement_file, "r") as json_file:
             letter_replacement = json.load(json_file)
         if add_points_and_stars:
@@ -45,11 +49,11 @@ def get_letter_replacements(level: int, add_points_and_stars: bool = False):
                 replacements.append("*")
 
     if level == 4:
-        clusterization_file = "resources/letter_replacement/clusterization.json"
-        if not os.path.exists(clusterization_file):
+        if not os.path.exists(CLUSTERIZATION_FILE):
+
             clusterization()
 
-        with open(clusterization_file, "r") as json_file:
+        with open(CLUSTERIZATION_FILE, "r") as json_file:
             clusters = json.load(json_file)
             for key in letter_replacement:
                 letter_replacement[key].extend(
@@ -100,7 +104,7 @@ def generate(
     non_toxic_letter_replacement = get_letter_replacements(level_non_toxic, add_points_and_stars=False)
 
     toxic_dict = set()
-    with open("resources/obscene_augmented.txt", "r") as dict_file:
+    with open(OBSCENE_AUGMENTED_FILE, "r") as dict_file:
         for line in dict_file:
             toxic_dict.add(line.strip())
 
@@ -118,20 +122,10 @@ def generate(
             if token_text in toxic_dict:
                 replace_chars = np.random.binomial(1, p_toxic_word)
                 if replace_chars:
-                    token_text = add_noise(
-                        token_text,
-                        toxic_letter_replacement,
-                        p_toxic_symbol,
-                        p_space,
-                    )
+                    token_text = add_noise(token_text, toxic_letter_replacement, p_toxic_symbol, p_space)
                 token_label = 1
             else:
-                result = add_noise(
-                    token_text,
-                    non_toxic_letter_replacement,
-                    p_non_toxic_symbol,
-                    add_space_proba=0,
-                )
+                result = add_noise(token_text, non_toxic_letter_replacement, p_non_toxic_symbol, add_space_proba=0)
                 token_text = result
 
             if sl:

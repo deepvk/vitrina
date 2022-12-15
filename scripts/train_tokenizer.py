@@ -3,7 +3,7 @@ from pathlib import Path
 
 from tokenizers.implementations import BertWordPieceTokenizer
 
-from src.utils.utils import load_json
+from src.utils.common import load_json
 
 
 def train_tokenizer(data_path: str = "resources/data/noisy_dataset.jsonl", save_to: str = "tokenizer"):
@@ -47,7 +47,4 @@ if __name__ == "__main__":
     parser.add_argument("--save-to", type=str, default=f"tokenizer")
 
     args = parser.parse_args()
-    train_tokenizer(
-        data_path=args.data,
-        save_to=args.save_to,
-    )
+    train_tokenizer(data_path=args.data, save_to=args.save_to)

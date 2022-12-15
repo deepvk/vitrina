@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from src.utils.utils import save_json
+from src.utils.common import save_json
 
 
 def prepare_ok_dataset(

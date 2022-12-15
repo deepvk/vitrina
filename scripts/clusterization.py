@@ -2,7 +2,6 @@ import argparse
 import glob
 import json
 import os
-from typing import Dict, List
 
 import freetype
 import numpy as np
@@ -15,15 +14,19 @@ BACKGROUND_COLOR = "#FFFFFF"
 
 
 def clusterization(
-    font_path: str = "fonts/NotoSans.ttf", font_size: int = 13, clusters: int = 500
-) -> Dict[str, List[str]]:
+    font_path: str = "resources/fonts/NotoSans.ttf",
+    output_path: str = "resources/letter_replacement/clusterization.json",
+    font_size: int = 13,
+    clusters: int = 500,
+) -> dict[str, list[str]]:
     """
     Clustering character images supported by a specified font.
 
     :param font_path: the path to the font that needs to generate images (default: fonts/NotoSans.ttf).
+    :param output_path: the path to the output file (default: letter_replacement/clusterization.json).
     :param font_size: font size in pixels (default: 13)
     :param clusters: number of clusters into which to divide a set of character images (default: 500)
-    :return: a dictionaty {russian symbol: a list of symbols from the same cluster}
+    :return: a dictionary {russian symbol: a list of symbols from the same cluster}
     """
     face = freetype.Face(font_path)
     image_font = ImageFont.truetype(font_path, max(font_size - 2, 8))
@@ -79,7 +82,7 @@ def clusterization(
                 char2image[similar_letter].save(f"{letter_dir}/{similar_letter}.jpg")
 
     result = {ch: cluster2char[char2cluster[ch]] for ch in RUSSIAN_LETTERS + RUSSIAN_LETTERS.upper()}
-    with open("resources/letter_replacement/clusterization.json", "w") as json_file:
+    with open(output_path, "w") as json_file:
         json.dump(result, json_file, ensure_ascii=False)
     return result
 
@@ -87,6 +90,7 @@ def clusterization(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--font-path", type=str, default="resources/fonts/NotoSans.ttf")
+    parser.add_argument("--output-path", type=str, default="resources/letter_replacement/clusterization.json")
     parser.add_argument("--font-size", type=int, default=13)
     parser.add_argument("--clusters", type=int, default=500)
     args = parser.parse_args()
