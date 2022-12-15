@@ -1,4 +1,5 @@
 import argparse
+from dataclasses import dataclass
 from typing import Callable, Tuple, List, Dict, Union, Optional
 
 import torch
@@ -22,6 +23,107 @@ from src.models.transformer_encoder.encoder_for_sequence_labeling import (
 from src.models.vtr.classifier import VisualToxicClassifier
 from src.models.vtr.sequence_labeler import VisualTextSequenceLabeler
 from src.utils.utils import dict_to_device, load_json, set_deterministic_mode
+
+LOSS = Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+CREATE_DATASET_FN = Callable[[List], SizedCollatedDataset]
+
+
+@dataclass
+class VtrParams:
+    font_size: int
+    window_size: int
+    kernel_size: int
+    emb_size: int
+    num_layers: int
+    out_channels: int
+    nhead: int
+    dropout: float
+    font: str
+    stride: int
+    max_seq_len: int
+    max_slices_count_per_word: Optional[int]
+
+
+@dataclass
+class ClassicalEncoderParams:
+    dropout: float
+    num_layers: int
+    tokenizer_path: str
+    max_seq_len: int
+
+
+def init_sl_pipeline_for_vtr(
+    params: VtrParams,
+) -> Tuple[nn.Module, LOSS, CREATE_DATASET_FN]:
+    criterion = BceLossForTokenClassification()
+    model = VisualTextSequenceLabeler(
+        height=params.font_size,
+        width=params.window_size,
+        kernel_size=params.kernel_size,
+        emb_size=params.emb_size,
+        num_layers=params.num_layers,
+        out_channels=params.out_channels,
+        nhead=params.nhead,
+        dropout=params.dropout,
+    )
+    create_dataset_f = lambda texts: VTRDatasetSL(
+        labeled_texts=texts,
+        font=params.font,
+        font_size=params.font_size,
+        window_size=params.window_size,
+        stride=params.stride,
+        max_seq_len=params.max_seq_len,
+        max_slices_count_per_word=params.max_slices_count_per_word,
+    )
+    return model, criterion, create_dataset_f
+
+
+def init_sl_pipeline_for_classical_encoder(
+    params: ClassicalEncoderParams,
+) -> Tuple[nn.Module, LOSS, CREATE_DATASET_FN]:
+    criterion = BceLossForTokenClassification()
+    model = EncoderForSequenceLabeling(dropout=params.dropout, num_layers=params.num_layers)
+    create_dataset_f = lambda texts: BERTDatasetSL(
+        texts,
+        params.tokenizer_path,
+        params.max_seq_len,
+    )
+    return model, criterion, create_dataset_f
+
+
+def init_classification_pipeline_for_vtr(
+    params: VtrParams,
+) -> Tuple[nn.Module, LOSS, CREATE_DATASET_FN]:
+    criterion = nn.BCEWithLogitsLoss()
+    model = VisualToxicClassifier(
+        height=params.font_size,
+        width=params.window_size,
+        kernel_size=params.kernel_size,
+        emb_size=params.emb_size,
+        num_layers=params.num_layers,
+        nhead=params.nhead,
+        out_channels=params.out_channels,
+        dropout=params.dropout,
+    )
+    create_dataset_f = lambda texts: VTRDataset(
+        texts,
+        params.font,
+        params.font_size,
+        params.window_size,
+        params.stride,
+        params.max_seq_len,
+    )
+    return model, criterion, create_dataset_f
+
+
+def init_classification_pipeline_for_classical_encoder(
+    params: ClassicalEncoderParams,
+) -> Tuple[nn.Module, LOSS, CREATE_DATASET_FN]:
+    criterion = nn.BCEWithLogitsLoss()
+    model = Encoder(dropout=params.dropout, num_layers=params.num_layers)
+    tokenizer_path: str = params.tokenizer_path
+    create_dataset_f = lambda texts: BERTDataset(texts, tokenizer_path, params.max_seq_len)
+    return model, criterion, create_dataset_f
 
 
 def train(
@@ -108,74 +210,38 @@ def train(
     val_dataset: Optional[SizedCollatedDataset] = None
     test_dataset: Optional[SizedCollatedDataset] = None
 
+    vtr_params = VtrParams(
+        font_size,
+        window_size,
+        kernel_size,
+        emb_size,
+        num_layers,
+        out_channels,
+        nhead,
+        dropout,
+        font,
+        stride,
+        max_seq_len,
+        max_slices_count_per_word,
+    )
+    classical_encoder_params = ClassicalEncoderParams(dropout, num_layers, tokenizer or "", max_seq_len)
     if sl:
-        criterion = BceLossForTokenClassification()
-        create_dataset_sl_f: Callable[
-            [List[Dict[str, Union[List[List[Union[str, int]]], int]]]],
-            SizedCollatedDataset,
-        ]
-        if not tokenizer:
-            model = VisualTextSequenceLabeler(
-                height=font_size,
-                width=window_size,
-                kernel_size=kernel_size,
-                emb_size=emb_size,
-                num_layers=num_layers,
-                out_channels=out_channels,
-                nhead=nhead,
-                dropout=dropout,
-            )
-            create_dataset_sl_f = lambda texts: VTRDatasetSL(
-                labeled_texts=texts,
-                font=font,
-                font_size=font_size,
-                window_size=window_size,
-                stride=stride,
-                max_seq_len=max_seq_len,
-                max_slices_count_per_word=max_slices_count_per_word,
-            )
-        else:
-            model = EncoderForSequenceLabeling(dropout=dropout, num_layers=num_layers)
-            tokenizer_path: str = tokenizer
-            create_dataset_sl_f = lambda texts: BERTDatasetSL(
-                texts,
-                tokenizer_path,
-                max_seq_len,
-            )
+        model, criterion, create_dataset_sl_f = (
+            init_sl_pipeline_for_classical_encoder(classical_encoder_params)
+            if tokenizer
+            else init_sl_pipeline_for_vtr(vtr_params)
+        )
         train_dataset = create_dataset_sl_f(labeled_texts)
         if val_labeled_texts is not None:
             val_dataset = create_dataset_sl_f(val_labeled_texts)
         if test_labeled_texts is not None:
             test_dataset = create_dataset_sl_f(test_labeled_texts)
     else:
-        criterion = nn.BCEWithLogitsLoss()
-        create_dataset_f: Callable[
-            [List[Dict[str, Union[str, int]]]],
-            SizedCollatedDataset,
-        ]
-        if not tokenizer:
-            model = VisualToxicClassifier(
-                height=font_size,
-                width=window_size,
-                kernel_size=kernel_size,
-                emb_size=emb_size,
-                num_layers=num_layers,
-                nhead=nhead,
-                out_channels=out_channels,
-                dropout=dropout,
-            )
-            create_dataset_f = lambda texts: VTRDataset(
-                texts,
-                font,
-                font_size,
-                window_size,
-                stride,
-                max_seq_len,
-            )
-        else:
-            model = Encoder(dropout=dropout, num_layers=num_layers)
-            tokenizer_path = tokenizer
-            create_dataset_f = lambda texts: BERTDataset(texts, tokenizer_path, max_seq_len)
+        model, criterion, create_dataset_f = (
+            init_classification_pipeline_for_classical_encoder(classical_encoder_params)
+            if tokenizer
+            else init_classification_pipeline_for_vtr(vtr_params)
+        )
         train_dataset = create_dataset_f(labeled_texts)
         if val_labeled_texts:
             val_dataset = create_dataset_f(val_labeled_texts)
