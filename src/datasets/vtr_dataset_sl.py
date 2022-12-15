@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
@@ -55,7 +54,7 @@ class VTRDatasetSL:
 
         return {"slices": slices, "labels": labels}
 
-    def collate_function(self, input_batch: List[Dict[str, List]]) -> Dict[str, torch.Tensor]:
+    def collate_function(self, input_batch: list[dict[str, list]]) -> dict[str, torch.Tensor]:
         key2values = defaultdict(list)
         max_word_len_in_slices = 0
         max_seq_len = 0
@@ -70,9 +69,9 @@ class VTRDatasetSL:
 
         zero_word = torch.zeros((max_word_len_in_slices, self.font_size, self.window_size))
 
-        result: Dict[str, List[List[int]]] = defaultdict(list)
-        padded_slices: List[List[torch.Tensor]] = []
-        labels_list: List[torch.Tensor] = []
+        result: dict[str, list[list[int]]] = defaultdict(list)
+        padded_slices: list[list[torch.Tensor]] = []
+        labels_list: list[torch.Tensor] = []
 
         for text, labels in zip(key2values["slices"], key2values["labels"]):
             padding_in_word_count = max_seq_len - len(text)
@@ -96,7 +95,7 @@ class VTRDatasetSL:
             labels_list.extend(labels + [-1] * padding_in_word_count)
             result["words_mask"].append([1] * len(text) + [0] * padding_in_word_count)
 
-        torch_result: Dict[str, torch.Tensor] = {
+        torch_result: dict[str, torch.Tensor] = {
             "slices": torch.stack([torch.cat(text) for text in padded_slices]),
             "max_word_len": torch.tensor(max_word_len_in_slices),
             "words_mask": torch.tensor(result["words_mask"], dtype=torch.bool),
