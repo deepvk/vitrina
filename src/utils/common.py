@@ -3,13 +3,14 @@ import math
 import os
 import random
 import re
-from typing import Dict, List, Any, Callable, Set, Optional
+from typing import Callable
 
 import numpy as np
 import pymorphy2
 import torch
 import ujson
 from PIL import ImageFont, Image, ImageDraw
+from loguru import logger
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -37,15 +38,13 @@ def text2image(text: str, font: str, font_size: int = 15) -> Image:
     return image
 
 
-def load_json(filename: str) -> List[Any]:
+def load_json(filename: str) -> list:
     with open(filename, encoding="utf-8") as f:
-        result = []
-        for line in f:
-            result.append(ujson.loads(line))
-        return result
+        result = [ujson.loads(line) for line in f]
+    return result
 
 
-def save_json(data: List[Any], filename: str) -> None:
+def save_json(data: list, filename: str) -> None:
     with open(filename, "w") as outfile:
         for labeled_text in data:
             json.dump(labeled_text, outfile, ensure_ascii=False)
@@ -53,11 +52,15 @@ def save_json(data: List[Any], filename: str) -> None:
 
 
 def dict_to_device(
-    batch: Dict[str, torch.Tensor],
-    except_keys: Optional[Set[str]] = None,
-    device: str = "cuda" if torch.cuda.is_available() else "cpu",
+    batch: dict[str, torch.Tensor],
+    except_keys: set[str] = None,
+    device: str = None,
 ):
-    except_keys_set: Set[str] = except_keys if except_keys is not None else set()
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info(f"Device is not specified, using {device}")
+
+    except_keys_set: set[str] = except_keys or set()
 
     for key, val in batch.items():
         if key in except_keys_set:
@@ -93,7 +96,7 @@ def lemmatize_word(word: str) -> str:
     return morph.parse(word)[0].normal_form.replace("ё", "е")
 
 
-def set_deterministic_mode(seed):
+def set_deterministic_mode(seed: int):
     _set_seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     torch.backends.benchmark = False
