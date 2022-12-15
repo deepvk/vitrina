@@ -7,13 +7,13 @@ from torch.utils.data import Dataset
 from transformers import BertTokenizer
 
 from src.utils.common import clean_text
-from src.utils.types import SlDatasetSample
+from src.datasets.common import SlDatasetSample
 
 
 class BERTDatasetSL(Dataset):
     def __init__(
         self,
-        labeled_texts: list[dict[str, SlDatasetSample]],
+        labeled_texts: list[SlDatasetSample],
         tokenizer: str,
         max_seq_len: int = 512,
     ):
