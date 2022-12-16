@@ -37,7 +37,7 @@ def train(
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
-        collate_fn=train_dataset.collate_function,
+        collate_fn=train_dataset.collate_function,  # type: ignore
         num_workers=config.num_workers,
         shuffle=True,
     )
@@ -48,7 +48,7 @@ def train(
         val_dataloader = DataLoader(
             val_dataset,
             batch_size=config.batch_size,
-            collate_fn=val_dataset.collate_function,
+            collate_fn=val_dataset.collate_function,  # type: ignore
             num_workers=config.num_workers,
             shuffle=False,
         )
@@ -59,7 +59,7 @@ def train(
         test_dataloader = DataLoader(
             test_dataset,
             batch_size=config.batch_size,
-            collate_fn=test_dataset.collate_function,
+            collate_fn=test_dataset.collate_function,  # type: ignore
             num_workers=config.num_workers,
             shuffle=False,
         )
