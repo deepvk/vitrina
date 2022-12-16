@@ -146,7 +146,7 @@ class VisualEmbedderSL(VisualEmbedder):
 
     def forward(self, batch: dict[str, torch.Tensor]):
         slices = batch["slices"]
-        slice_embeddings = super.__call__(slices)  # [batch size, slice count, emb size]
+        slice_embeddings = super().__call__(slices)  # [batch size, slice count, emb size]
         batch_size, slice_count, emb_size = slice_embeddings.shape
 
         masked_slice_embeddings = slice_embeddings * batch["tokens_mask"][:, :, None]

@@ -3,13 +3,14 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 from loguru import logger
+from torch.utils.data import Dataset
 
 from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer
 from src.datasets.common import SLDatasetSample
 
 
-class VTRDatasetSL:
+class VTRDatasetSL(Dataset):
     def __init__(
         self,
         labeled_texts: list[SLDatasetSample],

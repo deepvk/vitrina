@@ -11,6 +11,7 @@ import torch
 import ujson
 from PIL import ImageFont, Image, ImageDraw
 from loguru import logger
+from torch import nn
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -108,3 +109,17 @@ def _set_seed(seed: int):
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+class BceLossForTokenClassification(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.bce_loss = nn.BCEWithLogitsLoss(reduction="none")
+
+    def forward(self, outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        outputs = outputs.view(-1)
+        labels = labels.view(-1).float()
+        mask = (labels >= 0).float()
+        num_tokens = int(torch.sum(mask))
+        loss = self.bce_loss(outputs, labels) * mask
+        return torch.sum(loss) / num_tokens
