@@ -14,11 +14,11 @@ class VisualTextSequenceLabeler(nn.Module):
         emb_size: int = 768,
         num_layers: int = 1,
         out_channels: int = 32,
-        nhead: int = 12,
+        n_heads: int = 12,
         dropout: float = 0,
     ):
         super().__init__()
-        logger.info(f"Initializing Visual Text Sequence Labeler | emb_size: {emb_size}, num_layers: {num_layers}")
+        logger.info(f"Initializing VTR sequence labeler | emb size: {emb_size}, # layers: {num_layers}")
 
         self.embedder = VisualEmbedderSL(
             height=height,
@@ -31,7 +31,7 @@ class VisualTextSequenceLabeler(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=emb_size,
             dim_feedforward=3072,
-            nhead=nhead,
+            nhead=n_heads,
             dropout=dropout,
             batch_first=True,
         )

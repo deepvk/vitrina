@@ -14,10 +14,10 @@ class EncoderForSequenceLabeling(nn.Module):
         num_hidden_layers: int = 1,
         type_vocab_size: int = 1,
         num_layers: int = 1,
-        dropout=0.0,
+        dropout: float = 0.0,
     ):
         super().__init__()
-        logger.info("Initializing vanilla BERT model for sequence labeling")
+        logger.info("Initializing vanilla BERT sequence labeler | hidden size: {hidden_size}, # layers: {num_layers}")
 
         model_config = BertConfig(
             vocab_size=vocab_size,

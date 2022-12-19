@@ -39,7 +39,7 @@ class VisualToxicClassifier(nn.Module):
         dropout: float = 0,
     ):
         super().__init__()
-        logger.info(f"Initializing Visual Toxic Classifier | emb_size: {emb_size}, num_layers: {num_layers}")
+        logger.info(f"Initializing VTR classifier | emb size: {emb_size}, # layers: {num_layers}")
 
         self.embedder = VisualEmbedder(
             height=height,

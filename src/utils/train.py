@@ -74,7 +74,7 @@ def train(
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=config.warmup, num_training_steps=num_training_steps
     )
-    logger.info(f"Use LR schedule for {num_training_steps} training steps, {config.warmup} warmup steps")
+    logger.info(f"Use linear scheduler for {num_training_steps} training steps, {config.warmup} warmup steps")
 
     wandb.init(project=WANDB_PROJECT_NAME, config=asdict(config))
     wandb.watch(model, criterion, log="gradients", log_freq=50, idx=None, log_graph=False)
@@ -91,20 +91,21 @@ def train(
 
             optimizer.zero_grad()
             prediction = model(batch)
-            loss = criterion(prediction, batch["labels"])
+            loss = criterion(prediction, batch["labels"].float())
 
             loss.backward()
             optimizer.step()
             scheduler.step()
 
             wandb.log({"train/loss": loss, "train/learning_rate": scheduler.get_last_lr()[0]})
-            pbar.desc = f"Epoch {epoch} / {config.epochs} | Train loss: {loss}"
+            pbar.desc = f"Epoch {epoch} / {config.epochs} | Train loss: {round(loss.item(), 3)}"
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
                 logger.info("Evaluating the model on validation set")
                 acc, precision, recall, f1 = evaluate_model(model, val_dataloader, device, sl)
                 wandb.log({"val/accuracy": acc, "val/precision": precision, "val/recall": recall, "val/f1": f1})
+                logger.info(f"Accuracy: {acc}, Precision: {precision}, Recall: {recall}, F1: {f1}")
     pbar.close()
     logger.info("Training finished")
 

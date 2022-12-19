@@ -21,7 +21,7 @@ class BERTDatasetSL(Dataset):
         self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
 
-        logger.info(f"Loading tokenizer from {tokenizer}")
+        logger.info(f"Loading tokenizer from '{tokenizer}'")
         self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
 
     def __len__(self) -> int:

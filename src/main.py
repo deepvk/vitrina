@@ -127,7 +127,7 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
         out_channels=vtr.out_channels,
         emb_size=model_config.emb_size,
         num_layers=model_config.num_layers,
-        nhead=model_config.n_head,
+        n_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
     criterion = BceLossForTokenClassification()
