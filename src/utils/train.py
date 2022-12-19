@@ -121,7 +121,7 @@ def evaluate_model(
     model: nn.Module, dataloader: DataLoader, device: str, sl: bool, *, log: bool = True, group: str = ""
 ) -> dict[str, float]:
     if log:
-        logger.info("Evaluating the model on validation set")
+        logger.info(f"Evaluating the model on {group} set")
 
     model.eval()
     ground_truth = []
