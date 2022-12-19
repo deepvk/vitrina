@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from os.path import join
 
 import torch
 import wandb
@@ -12,7 +13,6 @@ from transformers import get_linear_schedule_with_warmup
 
 from src.utils.common import set_deterministic_mode, dict_to_device
 from src.utils.config import TrainingConfig
-
 
 WANDB_PROJECT_NAME = "visual-text"
 
@@ -102,27 +102,27 @@ def train(
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
-                logger.info("Evaluating the model on validation set")
-                acc, precision, recall, f1 = evaluate_model(model, val_dataloader, device, sl)
-                wandb.log({"val/accuracy": acc, "val/precision": precision, "val/recall": recall, "val/f1": f1})
-                logger.info(f"Accuracy: {acc}, Precision: {precision}, Recall: {recall}, F1: {f1}")
+                evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
     pbar.close()
     logger.info("Training finished")
 
-    if test_dataloader is not None:
-        logger.info("Evaluating the model on test set")
-        acc, precision, recall, f1 = evaluate_model(model, test_dataloader, device, sl)
-        wandb.log({"test/accuracy": acc, "test/precision": precision, "test/recall": recall, "test/f1": f1})
+    if val_dataloader is not None:
+        evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
 
-    if config.save_to is not None:
-        logger.info(f"Saving model to {config.save_to}")
-        torch.save(model.state_dict(), config.save_to)
+    if test_dataloader is not None:
+        evaluate_model(model, test_dataloader, device, sl, log=True, group="test")
+
+    logger.info(f"Saving model")
+    torch.save(model.state_dict(), join(wandb.run.dir, "last.ckpt"))
 
 
 @torch.no_grad()
 def evaluate_model(
-    model: nn.Module, dataloader: DataLoader, device: str, sl: bool
-) -> tuple[float, float, float, float]:
+    model: nn.Module, dataloader: DataLoader, device: str, sl: bool, *, log: bool = True, group: str = ""
+) -> dict[str, float]:
+    if log:
+        logger.info("Evaluating the model on validation set")
+
     model.eval()
     ground_truth = []
     predictions = []
@@ -145,9 +145,19 @@ def evaluate_model(
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
 
-    acc = accuracy_score(ground_truth, predictions)
-    precision = precision_score(ground_truth, predictions, zero_division=0)
-    recall = recall_score(ground_truth, predictions, zero_division=0)
-    f1 = f1_score(ground_truth, predictions, pos_label=1, zero_division=0)
+    result = {
+        "accuracy": accuracy_score(ground_truth, predictions),
+        "precision": precision_score(ground_truth, predictions, zero_division=0),
+        "recall": recall_score(ground_truth, predictions, zero_division=0),
+        "f1": f1_score(ground_truth, predictions, pos_label=1, zero_division=0),
+    }
 
-    return acc, precision, recall, f1
+    if group != "":
+        result = {f"{group}/{k}": v for k, v in result.items()}
+
+    if log:
+        wandb.log(result)
+        log_string = ", ".join(f"{k}: {round(v, 3)}" for k, v in result.items())
+        logger.info(log_string)
+
+    return result

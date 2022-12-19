@@ -77,8 +77,6 @@ class TrainingConfig:
     log_every: int = 1000
     num_workers: int = 1
 
-    save_to: str = None
-
     @classmethod
     def from_arguments(cls, args: Namespace) -> "TrainingConfig":
         config_fields = [it.name for it in fields(cls)]
@@ -100,10 +98,4 @@ class TrainingConfig:
         arg_parser.add_argument("--random-state", type=int, default=21, help="Random state.")
         arg_parser.add_argument("--log-every", type=int, default=1000, help="Log every N steps.")
         arg_parser.add_argument("--num-workers", type=int, default=1, help="Number of workers for data loaders.")
-        arg_parser.add_argument(
-            "--save-to",
-            type=str,
-            default=None,
-            help="Path to save model after training. If 'None', model will not be saved.",
-        )
         return arg_parser
