@@ -1,5 +1,5 @@
 from argparse import Namespace, ArgumentParser
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 
 @dataclass
@@ -14,7 +14,9 @@ class VTRConfig:
 
     @classmethod
     def from_arguments(cls, args: Namespace) -> "VTRConfig":
-        return cls(**vars(args))
+        config_fields = [it.name for it in fields(cls)]
+        kwargs = {it: getattr(args, it) for it in config_fields}
+        return cls(**kwargs)
 
     @classmethod
     def add_to_arg_parser(cls, arg_parser: ArgumentParser) -> ArgumentParser:
@@ -46,7 +48,9 @@ class TransformerConfig:
 
     @classmethod
     def from_arguments(cls, args: Namespace) -> "TransformerConfig":
-        return cls(**vars(args))
+        config_fields = [it.name for it in fields(cls)]
+        kwargs = {it: getattr(args, it) for it in config_fields}
+        return cls(**kwargs)
 
     @classmethod
     def add_to_arg_parser(cls, arg_parser: ArgumentParser) -> ArgumentParser:
@@ -77,7 +81,9 @@ class TrainingConfig:
 
     @classmethod
     def from_arguments(cls, args: Namespace) -> "TrainingConfig":
-        return cls(**vars(args))
+        config_fields = [it.name for it in fields(cls)]
+        kwargs = {it: getattr(args, it) for it in config_fields}
+        return cls(**kwargs)
 
     @classmethod
     def add_to_arg_parser(cls, arg_parser: ArgumentParser) -> ArgumentParser:
