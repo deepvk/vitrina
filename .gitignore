@@ -6,3 +6,11 @@ __pycache__/
 wandb/
 
 checkpoints/
+
+venv/
+conda/
+
+resources/data/*
+tokenizer/
+
+vitrina.egg-info
