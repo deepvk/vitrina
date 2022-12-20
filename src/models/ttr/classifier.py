@@ -4,7 +4,7 @@ from torch import nn
 from transformers import BertConfig, BertForSequenceClassification
 
 
-class Encoder(nn.Module):
+class TokensToxicClassifier(nn.Module):
     def __init__(
         self,
         vocab_size: int = 30_000,

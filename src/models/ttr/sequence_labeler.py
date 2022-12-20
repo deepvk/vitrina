@@ -4,7 +4,7 @@ from torch import nn
 from transformers import BertConfig, BertModel
 
 
-class EncoderForSequenceLabeling(nn.Module):
+class TextTokensSequenceLabeler(nn.Module):
     def __init__(
         self,
         vocab_size: int = 30_000,

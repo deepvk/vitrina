@@ -7,8 +7,8 @@ from src.datasets.bert_dataset import BERTDataset
 from src.datasets.bert_dataset_sl import BERTDatasetSL
 from src.datasets.vtr_dataset import VTRDataset
 from src.datasets.vtr_dataset_sl import VTRDatasetSL
-from src.models.transformer_encoder.encoder import Encoder
-from src.models.transformer_encoder.encoder_for_sequence_labeling import EncoderForSequenceLabeling
+from src.models.ttr.classifier import TokensToxicClassifier
+from src.models.ttr.sequence_labeler import TextTokensSequenceLabeler
 from src.models.vtr.classifier import VisualToxicClassifier
 from src.models.vtr.sequence_labeler import VisualTextSequenceLabeler
 from src.utils.common import load_json, BceLossForTokenClassification
@@ -40,7 +40,7 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
 
-    model = Encoder(
+    model = TokensToxicClassifier(
         num_layers=model_config.num_layers,
         hidden_size=model_config.emb_size,
         num_attention_heads=model_config.n_head,
@@ -62,7 +62,7 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
 
-    model = EncoderForSequenceLabeling(
+    model = TextTokensSequenceLabeler(
         num_layers=model_config.num_layers,
         hidden_size=model_config.emb_size,
         num_attention_heads=model_config.n_head,
