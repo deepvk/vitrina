@@ -22,7 +22,7 @@ class VTRSlicer:
 
     def __call__(self, text: str, max_slice_count: int = None) -> torch.Tensor:
         image = text2image(text, font=self.font, font_size=self.font_size)
-        image_bytes = torch.as_tensor(np.array(image))
+        image_bytes = torch.as_tensor(np.array(image)).float()
 
         image_width = image_bytes.shape[1]
         padded_image_width = int(
