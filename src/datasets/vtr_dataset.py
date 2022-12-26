@@ -47,7 +47,7 @@ class VTRDataset(Dataset):
         bs, ms, _, _ = batched_slices.shape
 
         # [batch size; most slices]
-        attention_mask = torch.zeros((bs, ms), dtype=torch.bool)
+        attention_mask = torch.zeros((bs, ms), dtype=torch.float)
         for i, s in enumerate(slices):
             attention_mask[i, : len(s)] = 1
 

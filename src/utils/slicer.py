@@ -8,12 +8,12 @@ from src.utils.common import text2image
 
 class VTRSlicer:
     def __init__(
-            self,
-            window_size: int = 25,
-            stride: int = 10,
-            font: str = "fonts/NotoSans.ttf",
-            font_size: int = 15,
-            ratio: float = 0.7,
+        self,
+        window_size: int = 25,
+        stride: int = 10,
+        font: str = "fonts/NotoSans.ttf",
+        font_size: int = 15,
+        ratio: float = 0.7,
     ):
         logger.info(f"Init VTRSlicer | window_size={window_size}, stride={stride}, "
                     f"font={font}, font_size={font_size}, ratio={ratio}")
