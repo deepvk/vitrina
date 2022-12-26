@@ -52,8 +52,6 @@ class VTRSlicer:
         image_bytes = 255 - image_bytes
         slices = image_bytes.unfold(1, self.window_size, self.stride).permute((1, 0, 2))[:max_slice_count]
 
-        torch.save(slices, "slices.pt")
-
         lb = 0
         rb = min(self.window_size - 1, len(char_num) - 1)
         r_shift = 1 if char_ratio_r[rb] >= self.ratio else 0
@@ -68,9 +66,5 @@ class VTRSlicer:
             l_shift = 0 if char_ratio_l[lb] >= self.ratio else 1
             r_shift = 1 if char_ratio_r[rb] >= self.ratio else 0
             slice_text.append(text[char_num[lb] + l_shift: char_num[rb] + r_shift])
-
-        with open("slice_text.txt", "w", encoding='utf-8') as file:
-            for txt in slice_text:
-                file.write(txt+'\n')
 
         return slices
