@@ -17,12 +17,13 @@ class VTRDataset(Dataset):
         window_size: int = 30,
         stride: int = 5,
         max_seq_len: int = 512,
+        ratio: float = 0.7,
     ):
         logger.info(f"Initializing VTRDataset with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
         self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
 
-        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
+        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride, ratio=ratio)
 
     def __len__(self) -> int:
         return len(self.labeled_texts)
@@ -46,7 +47,7 @@ class VTRDataset(Dataset):
         bs, ms, _, _ = batched_slices.shape
 
         # [batch size; most slices]
-        attention_mask = torch.zeros((bs, ms), dtype=torch.float)
+        attention_mask = torch.zeros((bs, ms), dtype=torch.bool)
         for i, s in enumerate(slices):
             attention_mask[i, : len(s)] = 1
 

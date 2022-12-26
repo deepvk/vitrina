@@ -27,7 +27,7 @@ def configure_arg_parser() -> ArgumentParser:
     arg_parser.add_argument("--tokenizer", type=str, default=None, help="Path to tokenizer [only for vanilla model].")
 
     arg_parser.add_argument("--vtr", action="store_true", help="Use Visual Token Representations.")
-    arg_parser.add_argument("--sl", action="store_true", help="Use Sequence Labeling task")
+    arg_parser.add_argument("--sl", action="store_true", help="Use Sequence Labeling task.")
 
     arg_parser = VTRConfig.add_to_arg_parser(arg_parser)
     arg_parser = TransformerConfig.add_to_arg_parser(arg_parser)
@@ -96,15 +96,17 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     criterion = BCEWithLogitsLoss()
 
     train_dataset = VTRDataset(
-        train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
+        train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
     )
     val_dataset = (
-        VTRDataset(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
+        VTRDataset(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len,
+                   vtr.ratio)
         if val_data
         else None
     )
     test_dataset = (
-        VTRDataset(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
+        VTRDataset(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len,
+                   vtr.ratio)
         if test_data
         else None
     )
