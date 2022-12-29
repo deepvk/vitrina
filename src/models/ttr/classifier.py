@@ -8,7 +8,7 @@ class TokensToxicClassifier(nn.Module):
     def __init__(
         self,
         vocab_size: int = 30_000,
-        max_position_embeddings: int = 514,
+        max_position_embeddings: int = 512,
         hidden_size: int = 768,
         num_attention_heads: int = 12,
         num_hidden_layers: int = 1,
