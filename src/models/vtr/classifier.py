@@ -32,42 +32,47 @@ class VisualToxicClassifier(nn.Module):
         height: int,
         width: int,
         kernel_size: int = 3,
-        emb_size: int = 768,
-        num_layers: int = 12,
-        nhead: int = 12,
+        max_position_embeddings: int = 512,
+        hidden_size: int = 768,
+        num_attention_heads: int = 12,
+        num_layers: int = 1,
+        dropout: float = 0.0,
         out_channels: int = 32,
-        dropout: float = 0,
     ):
         super().__init__()
-        logger.info(f"Initializing VTR classifier | emb size: {emb_size}, # layers: {num_layers}")
+        logger.info(f"Initializing VTR classifier | hidden size: {hidden_size}, # layers: {num_layers}")
 
         self.embedder = VisualEmbedder(
             height=height,
             width=width,
             kernel_size=kernel_size,
-            emb_size=emb_size,
+            emb_size=hidden_size,
             out_channels=out_channels,
         )
 
-        self.positional = PositionalEncoding(emb_size, dropout)
+        self.positional = PositionalEncoding(hidden_size, dropout, max_len=max_position_embeddings)
 
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=emb_size,
-            dim_feedforward=3072,
-            nhead=nhead,
+            d_model=hidden_size,
+            dim_feedforward=hidden_size * 4,
+            nhead=num_attention_heads,
             dropout=dropout,
             batch_first=True,
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        self.classifier = nn.Linear(emb_size, 1)
+        self.norm = nn.LayerNorm(hidden_size)
+        self.classifier = nn.Linear(hidden_size, 1)
 
-    def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, input_batch: dict[str, torch.Tensor]) -> torch.Tensor:
         embeddings = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
-
         embeddings = self.positional(embeddings)
-        encoder_output = self.encoder(
-            src=embeddings,
-            src_key_padding_mask=input_batch["attention_mask"],
-        )
-        encoder_output = encoder_output.mean(dim=1)
-        return self.classifier(encoder_output).squeeze(1)
+
+        # If a BoolTensor is provided, the positions with the value of True will be ignored
+        # while the position with the value of False will be unchanged.
+        attn_mask = ~(input_batch["attention_mask"].bool())
+        encoder_output = self.encoder(src=embeddings, src_key_padding_mask=attn_mask)  # batch_size, seq_len, emb_size
+
+        encoder_output = encoder_output.mean(dim=1)  # batch_size, emb_size
+        encoder_output = self.norm(encoder_output)  # batch_size, emb_size
+        result = self.classifier(encoder_output).squeeze(1)  # batch_size
+        return result
