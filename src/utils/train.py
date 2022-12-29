@@ -4,7 +4,7 @@ from os.path import join
 import torch
 import wandb
 from loguru import logger
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import Dataset, DataLoader
@@ -91,7 +91,7 @@ def train(
 
             optimizer.zero_grad()
             prediction = model(batch)
-            loss = criterion(prediction, batch["labels"].float())
+            loss = criterion(prediction, batch["labels"])
 
             loss.backward()
             optimizer.step()
@@ -126,7 +126,7 @@ def evaluate_model(
     model.eval()
     ground_truth = []
     predictions = []
-    for test_batch in dataloader:
+    for test_batch in tqdm(dataloader, leave=False):
         batch = dict_to_device(test_batch, except_keys={"max_word_len"}, device=device)
         output = model(batch)
 
@@ -145,12 +145,9 @@ def evaluate_model(
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
 
-    result = {
-        "accuracy": accuracy_score(ground_truth, predictions),
-        "precision": precision_score(ground_truth, predictions, zero_division=0),
-        "recall": recall_score(ground_truth, predictions, zero_division=0),
-        "f1": f1_score(ground_truth, predictions, pos_label=1, zero_division=0),
-    }
+    precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average="binary")
+    accuracy = accuracy_score(ground_truth, predictions)
+    result = {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1_score}
 
     if group != "":
         result = {f"{group}/{k}": v for k, v in result.items()}
