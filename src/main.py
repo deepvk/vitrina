@@ -88,9 +88,9 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         width=vtr.window_size,
         kernel_size=vtr.kernel_size,
         out_channels=vtr.out_channels,
-        emb_size=model_config.emb_size,
         num_layers=model_config.num_layers,
-        nhead=model_config.n_head,
+        hidden_size=model_config.emb_size,
+        num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
     criterion = BCEWithLogitsLoss()

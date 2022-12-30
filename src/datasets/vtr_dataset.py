@@ -43,7 +43,7 @@ class VTRDataset(Dataset):
         labels = [item[1] for item in batch]
 
         # [batch size; most slices; font size; window size]
-        batched_slices = pad_sequence(slices, batch_first=True, padding_value=0)
+        batched_slices = pad_sequence(slices, batch_first=True, padding_value=0.0).float()
         bs, ms, _, _ = batched_slices.shape
 
         # [batch size; most slices]
@@ -51,4 +51,8 @@ class VTRDataset(Dataset):
         for i, s in enumerate(slices):
             attention_mask[i, : len(s)] = 1
 
-        return {"slices": batched_slices, "attention_mask": attention_mask, "labels": torch.tensor(labels)}
+        return {
+            "slices": batched_slices,
+            "attention_mask": attention_mask,
+            "labels": torch.tensor(labels, dtype=torch.float),
+        }
