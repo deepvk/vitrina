@@ -15,8 +15,10 @@ class VTRSlicer:
         font_size: int = 15,
         ratio: float = 0.7,
     ):
-        logger.info(f"Init VTRSlicer | window_size={window_size}, stride={stride}, "
-                    f"font={font}, font_size={font_size}, ratio={ratio}")
+        logger.info(
+            f"Init VTRSlicer | window_size={window_size}, stride={stride}, "
+            f"font={font}, font_size={font_size}, ratio={ratio}"
+        )
         self.window_size = window_size
         self.stride = stride
         self.font = font
@@ -36,8 +38,8 @@ class VTRSlicer:
             char_img = text2image(text[i], font=self.font, font_size=self.font_size)
             width = char_img.size[0]
             char_num += [i] * width
-            char_ratio_l = np.concatenate((char_ratio_l, np.arange(1, 0, -1/width)))
-            char_ratio_r = np.concatenate((char_ratio_r, np.arange(1 / width, 1+1/width, 1/width)))
+            char_ratio_l = np.concatenate((char_ratio_l, np.arange(1, 0, -1 / width)))
+            char_ratio_r = np.concatenate((char_ratio_r, np.arange(1 / width, 1 + 1 / width, 1 / width)))
             image.append(char_img)
 
         image_bytes = torch.as_tensor(np.hstack(image)).float()
@@ -55,7 +57,7 @@ class VTRSlicer:
         lb = 0
         rb = min(self.window_size - 1, len(char_num) - 1)
         r_shift = 1 if char_ratio_r[rb] >= self.ratio else 0
-        slice_text = [text[char_num[lb]:char_num[rb] + r_shift]]
+        slice_text = [text[char_num[lb] : char_num[rb] + r_shift]]
 
         for i in range(len(slices) - 1):
             lb += self.stride
@@ -65,6 +67,6 @@ class VTRSlicer:
 
             l_shift = 0 if char_ratio_l[lb] >= self.ratio else 1
             r_shift = 1 if char_ratio_r[rb] >= self.ratio else 0
-            slice_text.append(text[char_num[lb] + l_shift: char_num[rb] + r_shift])
+            slice_text.append(text[char_num[lb] + l_shift : char_num[rb] + r_shift])
 
         return slices
