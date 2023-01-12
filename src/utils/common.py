@@ -18,31 +18,36 @@ morph = pymorphy2.MorphAnalyzer()
 _MENTION_REGEXP = re.compile(r"^\[id\d*|.*\],*\s*")
 _HTML_ESCAPE_CHR_REGEXP = re.compile(r"(&quot;)|(&lt;)|(&gt;)|(&amp;)|(&apos;)")
 _HTML_CODED_CHR_REGEXP = re.compile(r"(&#\d+;)")
-_URL_REGEXP = re.compile(r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)")
+_URL_REGEXP = re.compile(
+    r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)"
+)
 _BR_TOKEN_REGEXP = re.compile(r"<br>")
 _BOM_REGEXP = re.compile(r"\ufeff")
 _ZERO_WIDTH_SPACE_REGEXP = re.compile(r"\u200b")
-_EMOJI = re.compile("["
-            u"\U0001F600-\U0001F64F"  # emoticons
-            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-            u"\U0001F680-\U0001F6FF"  # transport & map symbols
-            u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-            u"\U00002500-\U00002BEF"  # chinese char
-            u"\U00002702-\U000027B0"
-            u"\U00002702-\U000027B0"
-            u"\U000024C2-\U0001F251"
-            u"\U0001f926-\U0001f937"
-            u"\U00010000-\U0010ffff"
-            u"\u2640-\u2642" 
-            u"\u2600-\u2B55"
-            u"\u200d"
-            u"\u23cf"
-            u"\u23e9"
-            u"\u231a"
-            u"\ufe0f"  # dingbats
-            u"\u3030"
-                       "]+", re.UNICODE)
-_REG = re.compile('[^а-я0-9 ]', flags=re.MULTILINE)
+_EMOJI = re.compile(
+    "["
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F300-\U0001F5FF"  # symbols & pictographs
+    "\U0001F680-\U0001F6FF"  # transport & map symbols
+    "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+    "\U00002500-\U00002BEF"  # chinese char
+    "\U00002702-\U000027B0"
+    "\U00002702-\U000027B0"
+    "\U000024C2-\U0001F251"
+    "\U0001f926-\U0001f937"
+    "\U00010000-\U0010ffff"
+    "\u2640-\u2642"
+    "\u2600-\u2B55"
+    "\u200d"
+    "\u23cf"
+    "\u23e9"
+    "\u231a"
+    "\ufe0f"  # dingbats
+    "\u3030"
+    "]+",
+    re.UNICODE,
+)
+_REG = re.compile("[^а-я0-9 ]", flags=re.MULTILINE)
 
 
 def text2image(text: str, font: str, font_size: int = 15) -> Image:
@@ -92,7 +97,7 @@ def dict_to_device(
 
 
 def clean_text(text: str):
-    '''
+    """
     text = re.sub(_MENTION_REGEXP, "", text)
     text = re.sub(_HTML_ESCAPE_CHR_REGEXP, " ", text)
     text = re.sub(_URL_REGEXP, " ", text)
@@ -101,14 +106,16 @@ def clean_text(text: str):
     text = re.sub(_BOM_REGEXP, " ", text)
     text = re.sub(_ZERO_WIDTH_SPACE_REGEXP, "", text)
     text = re.sub(_EMOJI, "", text)
-    '''
+    """
 
     text = re.sub(_REG, "", text)
 
     return text
 
 
-def cosine_decay_scheduler(final_steps: int = 300000, warm_steps: int = 3000) -> Callable[[int], float]:
+def cosine_decay_scheduler(
+    final_steps: int = 300000, warm_steps: int = 3000
+) -> Callable[[int], float]:
     def scheduler(i: int):
         if i < warm_steps:
             lr_mult = float(i) / float(max(1, warm_steps))
@@ -144,6 +151,7 @@ def char2int(text: list):
 
     targets = torch.LongTensor([char2int_dict[c] for c in text])
     return targets
+
 
 class BceLossForTokenClassification(nn.Module):
     def __init__(self):
