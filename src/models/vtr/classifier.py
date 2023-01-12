@@ -36,16 +36,16 @@ class PositionalEncoding(nn.Module):
 
 class VisualToxicClassifier(nn.Module):
     def __init__(
-            self,
-            height: int,
-            width: int,
-            kernel_size: int = 3,
-            max_position_embeddings: int = 512,
-            hidden_size: int = 768,
-            num_attention_heads: int = 12,
-            num_layers: int = 1,
-            dropout: float = 0.0,
-            out_channels: int = 32,
+        self,
+        height: int,
+        width: int,
+        kernel_size: int = 3,
+        max_position_embeddings: int = 512,
+        hidden_size: int = 768,
+        num_attention_heads: int = 12,
+        num_layers: int = 1,
+        dropout: float = 0.0,
+        out_channels: int = 32,
     ):
         super().__init__()
         logger.info(f"Initializing VTR classifier | hidden size: {hidden_size}, # layers: {num_layers}")
