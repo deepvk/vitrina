@@ -69,4 +69,4 @@ class VTRSlicer:
             r_shift = 1 if char_ratio_r[rb] >= self.ratio else 0
             slice_text.append(text[char_num[lb] + l_shift : char_num[rb] + r_shift])
 
-        return slices
+        return slices, slice_text

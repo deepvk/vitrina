@@ -99,14 +99,16 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
     )
     val_dataset = (
-        VTRDataset(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len,
-                   vtr.ratio)
+        VTRDataset(
+            val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
+        )
         if val_data
         else None
     )
     test_dataset = (
-        VTRDataset(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len,
-                   vtr.ratio)
+        VTRDataset(
+            test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
+        )
         if test_data
         else None
     )
@@ -138,16 +140,12 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
         train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
     )
     val_dataset = (
-        VTRDatasetSL(
-            val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
-        )
+        VTRDatasetSL(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
         if val_data
         else None
     )
     test_dataset = (
-        VTRDatasetSL(
-            test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
-        )
+        VTRDatasetSL(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
         if test_data
         else None
     )
