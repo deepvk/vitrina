@@ -22,6 +22,27 @@ _URL_REGEXP = re.compile(r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{
 _BR_TOKEN_REGEXP = re.compile(r"<br>")
 _BOM_REGEXP = re.compile(r"\ufeff")
 _ZERO_WIDTH_SPACE_REGEXP = re.compile(r"\u200b")
+_EMOJI = re.compile("["
+            u"\U0001F600-\U0001F64F"  # emoticons
+            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+            u"\U0001F680-\U0001F6FF"  # transport & map symbols
+            u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+            u"\U00002500-\U00002BEF"  # chinese char
+            u"\U00002702-\U000027B0"
+            u"\U00002702-\U000027B0"
+            u"\U000024C2-\U0001F251"
+            u"\U0001f926-\U0001f937"
+            u"\U00010000-\U0010ffff"
+            u"\u2640-\u2642" 
+            u"\u2600-\u2B55"
+            u"\u200d"
+            u"\u23cf"
+            u"\u23e9"
+            u"\u231a"
+            u"\ufe0f"  # dingbats
+            u"\u3030"
+                       "]+", re.UNICODE)
+_REG = re.compile('[^а-я0-9 ]', flags=re.MULTILINE)
 
 
 def text2image(text: str, font: str, font_size: int = 15) -> Image:
@@ -71,6 +92,7 @@ def dict_to_device(
 
 
 def clean_text(text: str):
+    '''
     text = re.sub(_MENTION_REGEXP, "", text)
     text = re.sub(_HTML_ESCAPE_CHR_REGEXP, " ", text)
     text = re.sub(_URL_REGEXP, " ", text)
@@ -78,6 +100,11 @@ def clean_text(text: str):
     text = re.sub(_HTML_CODED_CHR_REGEXP, " ", text)
     text = re.sub(_BOM_REGEXP, " ", text)
     text = re.sub(_ZERO_WIDTH_SPACE_REGEXP, "", text)
+    text = re.sub(_EMOJI, "", text)
+    '''
+
+    text = re.sub(_REG, "", text)
+
     return text
 
 
@@ -110,6 +137,13 @@ def _set_seed(seed: int):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
+
+def char2int(text: list):
+    chars = "0123456789абвгдежзийклмнопрстуфхцчшщъыьэюя "
+    char2int_dict = {char: i + 1 for i, char in enumerate(chars)}
+
+    targets = torch.LongTensor([char2int_dict[c] for c in text])
+    return targets
 
 class BceLossForTokenClassification(nn.Module):
     def __init__(self):
