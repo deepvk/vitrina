@@ -10,6 +10,7 @@ class VTRConfig:
     stride: int
     kernel_size: int
     out_channels: int
+    ratio: float
     max_slices_count_per_word: int = None
 
     @classmethod
@@ -33,6 +34,7 @@ class VTRConfig:
             "--out-channels", type=int, default=256, help="Number of output channels in the last convolutional layer."
         )
 
+        arg_parser.add_argument("--ratio", type=float, default=0.7, help="Ratio of letter to be detected on a slice.")
         arg_parser.add_argument(
             "--max-slices-count-per-word", type=int, default=9, help="Maximum number of slices per word."
         )
