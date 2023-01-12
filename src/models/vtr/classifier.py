@@ -88,12 +88,13 @@ class VisualToxicClassifier(nn.Module):
         # OCR
         criterion = CTCLoss(reduction="sum", zero_infinity=True)
 
-        texts = list(''.join(np.concatenate(input_batch["texts"]).flatten()))
+        texts = list("".join(np.concatenate(input_batch["texts"]).flatten()))
         targets = char2int(texts)
 
         get_len = np.vectorize(len)
-        target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in input_batch['texts']],
-                                      batch_first=True, padding_value=0)
+        target_lengths = pad_sequence(
+            [torch.from_numpy(get_len(arr)) for arr in input_batch["texts"]], batch_first=True, padding_value=0
+        )
 
         logits = self.ocr(conv)
         log_probs = torch.nn.functional.log_softmax(logits, dim=2)
