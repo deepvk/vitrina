@@ -48,9 +48,7 @@ class VisualToxicClassifier(nn.Module):
         out_channels: int = 32,
     ):
         super().__init__()
-        logger.info(
-            f"Initializing VTR classifier | hidden size: {hidden_size}, # layers: {num_layers}"
-        )
+        logger.info(f"Initializing VTR classifier | hidden size: {hidden_size}, # layers: {num_layers}")
 
         self.embedder = VisualEmbedder(
             height=height,
@@ -60,9 +58,7 @@ class VisualToxicClassifier(nn.Module):
             out_channels=out_channels,
         )
 
-        self.positional = PositionalEncoding(
-            hidden_size, dropout, max_len=max_position_embeddings
-        )
+        self.positional = PositionalEncoding(hidden_size, dropout, max_len=max_position_embeddings)
 
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=hidden_size,
@@ -77,17 +73,13 @@ class VisualToxicClassifier(nn.Module):
         self.ocr = BiLSTM(input_size=256, hidden_size=256, num_layers=2, num_classes=60)
 
     def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[Any, Any]:
-        embeddings, conv = self.embedder(
-            input_batch["slices"]
-        )  # batch_size, seq_len, emb_size
+        embeddings, conv = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
         embeddings = self.positional(embeddings)
 
         # If a BoolTensor is provided, the positions with the value of True will be ignored
         # while the position with the value of False will be unchanged.
         attn_mask = ~(input_batch["attention_mask"].bool())
-        encoder_output = self.encoder(
-            src=embeddings, src_key_padding_mask=attn_mask
-        )  # batch_size, seq_len, emb_size
+        encoder_output = self.encoder(src=embeddings, src_key_padding_mask=attn_mask)  # batch_size, seq_len, emb_size
 
         encoder_output = encoder_output.mean(dim=1)  # batch_size, emb_size
         encoder_output = self.norm(encoder_output)  # batch_size, emb_size
@@ -101,9 +93,7 @@ class VisualToxicClassifier(nn.Module):
         targets = char2int(texts)
 
         get_len = np.vectorize(len)
-        target_lengths = [
-            torch.from_numpy(get_len(arr)) for arr in input_batch["texts"]
-        ]
+        target_lengths = [torch.from_numpy(get_len(arr)) for arr in input_batch["texts"]]
         target_lengths = pad_sequence(target_lengths, batch_first=True, padding_value=0)
 
         logits = self.ocr(conv)

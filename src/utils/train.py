@@ -74,14 +74,10 @@ def train(
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=config.warmup, num_training_steps=num_training_steps
     )
-    logger.info(
-        f"Use linear scheduler for {num_training_steps} training steps, {config.warmup} warmup steps"
-    )
+    logger.info(f"Use linear scheduler for {num_training_steps} training steps, {config.warmup} warmup steps")
 
     wandb.init(project=WANDB_PROJECT_NAME, config=asdict(config))
-    wandb.watch(
-        model, criterion, log="gradients", log_freq=50, idx=None, log_graph=False
-    )
+    wandb.watch(model, criterion, log="gradients", log_freq=50, idx=None, log_graph=False)
 
     logger.info(f"Start training for {config.epochs} epochs")
     pbar = tqdm(total=num_training_steps)
@@ -91,9 +87,7 @@ def train(
             model.train()
 
             batch_num += 1
-            batch = dict_to_device(
-                batch, except_keys={"max_word_len", "texts"}, device=device
-            )
+            batch = dict_to_device(batch, except_keys={"max_word_len", "texts"}, device=device)
 
             optimizer.zero_grad()
             prediction, ctc_loss = model(batch)
@@ -112,9 +106,7 @@ def train(
                     "train/ctc_loss": ctc_loss,
                 }
             )
-            pbar.desc = (
-                f"Epoch {epoch} / {config.epochs} | Train loss: {round(loss.item(), 3)}"
-            )
+            pbar.desc = f"Epoch {epoch} / {config.epochs} | Train loss: {round(loss.item(), 3)}"
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
@@ -149,9 +141,7 @@ def evaluate_model(
     ground_truth = []
     predictions = []
     for test_batch in tqdm(dataloader, leave=False):
-        batch = dict_to_device(
-            test_batch, except_keys={"max_word_len", "texts"}, device=device
-        )
+        batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
         output, _ = model(batch)
 
         true_labels = test_batch["labels"]
@@ -169,9 +159,7 @@ def evaluate_model(
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
 
-    precision, recall, f1_score, _ = precision_recall_fscore_support(
-        ground_truth, predictions, average="binary"
-    )
+    precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average="binary")
     accuracy = accuracy_score(ground_truth, predictions)
     result = {
         "accuracy": accuracy,
