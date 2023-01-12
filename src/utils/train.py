@@ -87,17 +87,19 @@ def train(
             model.train()
 
             batch_num += 1
-            batch = dict_to_device(batch, except_keys={"max_word_len"}, device=device)
+            batch = dict_to_device(batch, except_keys={"max_word_len", "texts"}, device=device)
 
             optimizer.zero_grad()
-            prediction = model(batch)
-            loss = criterion(prediction, batch["labels"])
+            prediction, ctc_loss = model(batch)
+            bce_loss = criterion(prediction, batch["labels"])
+            loss = bce_loss + 0.4 * ctc_loss
 
             loss.backward()
             optimizer.step()
             scheduler.step()
 
-            wandb.log({"train/loss": loss, "train/learning_rate": scheduler.get_last_lr()[0]})
+            wandb.log({"train/loss": loss, "train/learning_rate": scheduler.get_last_lr()[0],
+                       "train/bce_loss": bce_loss, "train/ctc_loss": ctc_loss})
             pbar.desc = f"Epoch {epoch} / {config.epochs} | Train loss: {round(loss.item(), 3)}"
             pbar.update()
 
@@ -127,8 +129,8 @@ def evaluate_model(
     ground_truth = []
     predictions = []
     for test_batch in tqdm(dataloader, leave=False):
-        batch = dict_to_device(test_batch, except_keys={"max_word_len"}, device=device)
-        output = model(batch)
+        batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
+        output, _ = model(batch)
 
         true_labels = test_batch["labels"]
 

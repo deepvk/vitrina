@@ -1,8 +1,16 @@
+from typing import Any
+
 import torch
 from loguru import logger
 from torch import nn
+from torch.nn import CTCLoss
+from torch.nn.utils.rnn import pad_sequence
+import numpy as np
 
 from src.models.vtr.embedder import VisualEmbedder
+from src.models.vtr.ocr import BiLSTM
+
+from src.utils.common import char2int
 
 
 class PositionalEncoding(nn.Module):
@@ -28,16 +36,16 @@ class PositionalEncoding(nn.Module):
 
 class VisualToxicClassifier(nn.Module):
     def __init__(
-        self,
-        height: int,
-        width: int,
-        kernel_size: int = 3,
-        max_position_embeddings: int = 512,
-        hidden_size: int = 768,
-        num_attention_heads: int = 12,
-        num_layers: int = 1,
-        dropout: float = 0.0,
-        out_channels: int = 32,
+            self,
+            height: int,
+            width: int,
+            kernel_size: int = 3,
+            max_position_embeddings: int = 512,
+            hidden_size: int = 768,
+            num_attention_heads: int = 12,
+            num_layers: int = 1,
+            dropout: float = 0.0,
+            out_channels: int = 32,
     ):
         super().__init__()
         logger.info(f"Initializing VTR classifier | hidden size: {hidden_size}, # layers: {num_layers}")
@@ -62,9 +70,10 @@ class VisualToxicClassifier(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.norm = nn.LayerNorm(hidden_size)
         self.classifier = nn.Linear(hidden_size, 1)
+        self.ocr = BiLSTM(input_size=256, hidden_size=256, num_layers=2, num_classes=60)
 
-    def forward(self, input_batch: dict[str, torch.Tensor]) -> torch.Tensor:
-        embeddings = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
+    def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[Any, Any]:
+        embeddings, conv = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
         embeddings = self.positional(embeddings)
 
         # If a BoolTensor is provided, the positions with the value of True will be ignored
@@ -75,4 +84,23 @@ class VisualToxicClassifier(nn.Module):
         encoder_output = encoder_output.mean(dim=1)  # batch_size, emb_size
         encoder_output = self.norm(encoder_output)  # batch_size, emb_size
         result = self.classifier(encoder_output).squeeze(1)  # batch_size
-        return result
+
+        # OCR
+        criterion = CTCLoss(reduction='sum', zero_infinity=True)
+
+        texts = np.concatenate(input_batch['texts']).flatten()
+        texts = list(''.join(texts))
+        targets = char2int(texts)
+
+        get_len = np.vectorize(len)
+        target_lengths = [torch.from_numpy(get_len(arr)) for arr in input_batch['texts']]
+        target_lengths = pad_sequence(target_lengths, batch_first=True, padding_value=0)
+
+        logits = self.ocr(conv)
+        log_probs = torch.nn.functional.log_softmax(logits, dim=2)
+        input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
+
+        ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
+        ctc_loss /= conv.shape[0]
+
+        return result, ctc_loss
