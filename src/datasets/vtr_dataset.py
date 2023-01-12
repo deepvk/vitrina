@@ -20,10 +20,12 @@ class VTRDataset(Dataset):
         stride: int = 5,
         max_seq_len: int = 512,
         ratio: float = 0.7,
+        ocr_flag: bool = True,
     ):
         logger.info(f"Initializing VTRDataset with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
         self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
+        self.ocr_flag = ocr_flag
 
         self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride, ratio=ratio)
 
@@ -35,7 +37,8 @@ class VTRDataset(Dataset):
         raw_text = clean_text(sample["text"])
 
         # [n slices; font size; window size]
-        slices, slice_text = self.slicer(raw_text)
+        if self.ocr_flag:
+            slices, slice_text = self.slicer(raw_text)
         slices = slices[: self.max_seq_len]
         slice_text = slice_text[: self.max_seq_len]
 

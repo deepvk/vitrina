@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -6,7 +8,7 @@ from loguru import logger
 from src.utils.common import text2image
 
 
-class VTRSlicer:
+class VTRSlicerOCR:
     def __init__(
         self,
         window_size: int = 25,
@@ -16,7 +18,7 @@ class VTRSlicer:
         ratio: float = 0.7,
     ):
         logger.info(
-            f"Init VTRSlicer | window_size={window_size}, stride={stride}, "
+            f"Init VTRSlicerOCR | window_size={window_size}, stride={stride}, "
             f"font={font}, font_size={font_size}, ratio={ratio}"
         )
         self.window_size = window_size
@@ -25,7 +27,7 @@ class VTRSlicer:
         self.font_size = font_size
         self.ratio = ratio
 
-    def __call__(self, text: str, max_slice_count: int = None) -> torch.Tensor:
+    def __call__(self, text: str, max_slice_count: int = None) -> tuple[Any, list[str]]:
         image = []
         char_num = []
         char_ratio_l = np.array([])
