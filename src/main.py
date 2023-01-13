@@ -81,6 +81,8 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
 
 def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
     logger.info("Training Visual Token Representation Encoder for sequence classification.")
+    ocr_flag = False if args.no_ocr else True
+    logger.info(f"OCR: {ocr_flag}")
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
     vtr = VTRConfig.from_arguments(args)
@@ -94,11 +96,9 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         hidden_size=model_config.emb_size,
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
+        ocr_flag=ocr_flag,
     )
     criterion = BCEWithLogitsLoss()
-
-    ocr_flag = False if args.no_ocr else True
-    logger.info(f"OCR: {ocr_flag}")
 
     train_dataset = VTRDataset(
         train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio,
@@ -122,7 +122,8 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     )
 
     train(
-        model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
+        model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset,
+        ocr_flag=ocr_flag
     )
 
 
