@@ -1,5 +1,3 @@
-from typing import Any
-
 import torch
 from loguru import logger
 from torch import nn
@@ -74,7 +72,7 @@ class VisualToxicClassifier(nn.Module):
         self.ocr = BiLSTM(input_size=256, hidden_size=256, num_layers=2, num_classes=60)
         self.ocr_flag = ocr_flag
 
-    def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[Any, Any]:
+    def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor] | torch.Tensor:
         embeddings, conv = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
         embeddings = self.positional(embeddings)
 
