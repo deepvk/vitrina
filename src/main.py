@@ -101,21 +101,38 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     criterion = BCEWithLogitsLoss()
 
     train_dataset = VTRDataset(
-        train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio,
-        ocr_flag
+        train_data,
+        vtr.font,
+        vtr.font_size,
+        vtr.window_size,
+        vtr.stride,
+        training_config.max_seq_len,
+        vtr.ratio,
+        ocr_flag,
     )
     val_dataset = (
         VTRDataset(
-            val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio,
-            ocr_flag
+            val_data,
+            vtr.font,
+            vtr.font_size,
+            vtr.window_size,
+            vtr.stride,
+            training_config.max_seq_len,
+            vtr.ratio,
+            ocr_flag,
         )
         if val_data
         else None
     )
     test_dataset = (
         VTRDataset(
-            test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio,
-            ocr_flag
+            test_data,
+            vtr.font,
+            vtr.font_size,
+            vtr.window_size,
+            vtr.stride,
+            training_config.max_seq_len, vtr.ratio,
+            ocr_flag,
         )
         if test_data
         else None

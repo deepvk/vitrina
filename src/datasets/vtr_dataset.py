@@ -27,7 +27,9 @@ class VTRDataset(Dataset):
         self.max_seq_len = max_seq_len
         self.ocr_flag = ocr_flag
 
-        self.slicer_ocr = VTRSlicerOCR(font=font, font_size=font_size, window_size=window_size, stride=stride, ratio=ratio)
+        self.slicer_ocr = VTRSlicerOCR(
+            font=font, font_size=font_size, window_size=window_size, stride=stride, ratio=ratio
+        )
         self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
 
     def __len__(self) -> int:
@@ -67,7 +69,7 @@ class VTRDataset(Dataset):
                 "slices": batched_slices,
                 "attention_mask": attention_mask,
                 "labels": torch.tensor(labels, dtype=torch.float),
-                "texts": texts
+                "texts": texts,
             }
         else:
             return {
