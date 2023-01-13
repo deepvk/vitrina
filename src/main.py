@@ -131,7 +131,8 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             vtr.font_size,
             vtr.window_size,
             vtr.stride,
-            training_config.max_seq_len, vtr.ratio,
+            training_config.max_seq_len,
+            vtr.ratio,
             ocr_flag,
         )
         if test_data
