@@ -1,5 +1,3 @@
-from typing import Any
-
 import torch
 from loguru import logger
 from torch.nn.utils.rnn import pad_sequence
@@ -35,7 +33,7 @@ class VTRDataset(Dataset):
     def __len__(self) -> int:
         return len(self.labeled_texts)
 
-    def __getitem__(self, index) -> tuple[Any, str | int, list[str]] | tuple[Any, str | int]:
+    def __getitem__(self, index) -> tuple[torch.Tensor, int, list[str]] | tuple[torch.Tensor, int]:
         sample = self.labeled_texts[index]
         raw_text = clean_text(sample["text"])
 
@@ -50,7 +48,9 @@ class VTRDataset(Dataset):
             slices = slices[: self.max_seq_len]
             return slices, sample["label"]
 
-    def collate_function(self, batch: list[tuple[torch.Tensor, int, list[str]]]) -> dict[str, torch.Tensor | list[Any]]:
+    def collate_function(
+        self, batch: list[tuple[torch.Tensor, int, list[str]]]
+    ) -> dict[str, torch.Tensor | list[list[str]]]:
         slices = [item[0] for item in batch]
         labels = [item[1] for item in batch]
 
