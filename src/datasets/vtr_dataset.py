@@ -51,7 +51,7 @@ class VTRDataset(Dataset):
             return slices, sample["label"]
 
     def collate_function(
-        self, batch: list[tuple[torch.Tensor, int] | tuple[torch.Tensor, int, list[str]]]
+        self, batch: list[tuple[torch.Tensor, int, list[str]]]
     ) -> dict[str, torch.Tensor | list[Any]]:
         slices = [item[0] for item in batch]
         labels = [item[1] for item in batch]
