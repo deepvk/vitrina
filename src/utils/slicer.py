@@ -1,5 +1,3 @@
-from typing import Any
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -27,7 +25,7 @@ class VTRSlicerOCR:
         self.font_size = font_size
         self.ratio = ratio
 
-    def __call__(self, text: str, max_slice_count: int = None) -> tuple[Any, list[str]]:
+    def __call__(self, text: str, max_slice_count: int = None) -> tuple[torch.Tensor, list[str]]:
         image = []
         char_num = []
         char_ratio_l = np.array([])
