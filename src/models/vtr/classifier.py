@@ -46,6 +46,7 @@ class VisualToxicClassifier(nn.Module):
         num_layers: int = 1,
         dropout: float = 0.0,
         out_channels: int = 32,
+        ocr_flag: bool = True,
     ):
         super().__init__()
         logger.info(f"Initializing VTR classifier | hidden size: {hidden_size}, # layers: {num_layers}")
@@ -71,6 +72,7 @@ class VisualToxicClassifier(nn.Module):
         self.norm = nn.LayerNorm(hidden_size)
         self.classifier = nn.Linear(hidden_size, 1)
         self.ocr = BiLSTM(input_size=256, hidden_size=256, num_layers=2, num_classes=60)
+        self.ocr_flag = ocr_flag
 
     def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[Any, Any]:
         embeddings, conv = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
@@ -86,21 +88,25 @@ class VisualToxicClassifier(nn.Module):
         result = self.classifier(encoder_output).squeeze(1)  # batch_size
 
         # OCR
-        criterion = CTCLoss(reduction="sum", zero_infinity=True)
+        if self.ocr_flag:
+            criterion = CTCLoss(reduction="sum", zero_infinity=True)
 
-        texts = list("".join(np.concatenate(input_batch["texts"]).flatten()))
-        targets = char2int(texts)
+            texts = list("".join(np.concatenate(input_batch["texts"]).flatten()))
+            targets = char2int(texts)
 
-        get_len = np.vectorize(len)
-        target_lengths = pad_sequence(
-            [torch.from_numpy(get_len(arr)) for arr in input_batch["texts"]], batch_first=True, padding_value=0
-        )
+            get_len = np.vectorize(len)
+            target_lengths = pad_sequence(
+                [torch.from_numpy(get_len(arr)) for arr in input_batch["texts"]], batch_first=True, padding_value=0
+            )
 
-        logits = self.ocr(conv)
-        log_probs = torch.nn.functional.log_softmax(logits, dim=2)
-        input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
+            logits = self.ocr(conv)
+            log_probs = torch.nn.functional.log_softmax(logits, dim=2)
+            input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
 
-        ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
-        ctc_loss /= conv.shape[0]
+            ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
+            ctc_loss /= conv.shape[0]
 
-        return result, ctc_loss
+            return result, ctc_loss
+
+        else:
+            return result
