@@ -6,7 +6,7 @@ from loguru import logger
 from src.utils.common import text2image
 
 
-class VTRSlicerOCR:
+class VTRSlicerWithText:
     def __init__(
         self,
         window_size: int = 25,
@@ -16,7 +16,7 @@ class VTRSlicerOCR:
         ratio: float = 0.7,
     ):
         logger.info(
-            f"Init VTRSlicerOCR | window_size={window_size}, stride={stride}, "
+            f"Init VTRSlicerWithText | window_size={window_size}, stride={stride}, "
             f"font={font}, font_size={font_size}, ratio={ratio}"
         )
         self.window_size = window_size
