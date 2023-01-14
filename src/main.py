@@ -97,7 +97,6 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         hidden_size=model_config.emb_size,
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
-        ocr_flag=ocr_flag,
     )
     criterion = BCEWithLogitsLoss()
 
@@ -179,7 +178,6 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         sl=False,
         val_dataset=val_dataset,
         test_dataset=test_dataset,
-        ocr_flag=ocr_flag,
     )
 
 
