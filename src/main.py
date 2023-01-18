@@ -102,70 +102,38 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
 
     if ocr_flag:
         train_dataset: Dataset = VTRDatasetOCR(
-            train_data,
-            vtr.font,
-            vtr.font_size,
-            vtr.window_size,
-            vtr.stride,
-            training_config.max_seq_len,
-            vtr.ratio,
+            train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
         )
+
         val_dataset: Dataset = (
             VTRDatasetOCR(
-                val_data,
-                vtr.font,
-                vtr.font_size,
-                vtr.window_size,
-                vtr.stride,
-                training_config.max_seq_len,
-                vtr.ratio,
+                val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
             )
             if val_data
             else None
         )
+
         test_dataset: Dataset = (
             VTRDatasetOCR(
-                test_data,
-                vtr.font,
-                vtr.font_size,
-                vtr.window_size,
-                vtr.stride,
-                training_config.max_seq_len,
-                vtr.ratio,
+                test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
             )
             if test_data
             else None
         )
+
     else:
         train_dataset = VTRDataset(
-            train_data,
-            vtr.font,
-            vtr.font_size,
-            vtr.window_size,
-            vtr.stride,
-            training_config.max_seq_len,
+            train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
         )
+
         val_dataset = (
-            VTRDataset(
-                val_data,
-                vtr.font,
-                vtr.font_size,
-                vtr.window_size,
-                vtr.stride,
-                training_config.max_seq_len,
-            )
+            VTRDataset(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
             if val_data
             else None
         )
+
         test_dataset = (
-            VTRDataset(
-                test_data,
-                vtr.font,
-                vtr.font_size,
-                vtr.window_size,
-                vtr.stride,
-                training_config.max_seq_len,
-            )
+            VTRDataset(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
             if test_data
             else None
         )
