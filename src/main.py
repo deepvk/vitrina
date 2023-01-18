@@ -91,6 +91,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         num_layers=model_config.num_layers,
         hidden_size=model_config.emb_size,
         num_attention_heads=model_config.n_head,
+        num_classes=model_config.num_classes,
         dropout=model_config.dropout,
     )
     criterion = CrossEntropyLoss()
