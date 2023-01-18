@@ -8,6 +8,26 @@ from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer, VTRSlicerWithText
 
 
+def collate_batch_common(batch: list[tuple[torch.Tensor, int]] | list[tuple[torch.Tensor, int, list[str]]]):
+    slices = [item[0] for item in batch]
+    labels = [item[1] for item in batch]
+
+    # [batch size; most slices; font size; window size]
+    batched_slices = pad_sequence(slices, batch_first=True, padding_value=0.0).float()
+    bs, ms, _, _ = batched_slices.shape
+
+    # [batch size; most slices]
+    attention_mask = torch.zeros((bs, ms), dtype=torch.float)
+    for i, s in enumerate(slices):
+        attention_mask[i, : len(s)] = 1
+
+    return {
+        "slices": batched_slices,
+        "attention_mask": attention_mask,
+        "labels": torch.tensor(labels, dtype=torch.float),
+    }
+
+
 class VTRDataset(Dataset):
     def __init__(
         self,
@@ -37,23 +57,7 @@ class VTRDataset(Dataset):
         return slices, sample["label"]
 
     def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
-        slices = [item[0] for item in batch]
-        labels = [item[1] for item in batch]
-
-        # [batch size; most slices; font size; window size]
-        batched_slices = pad_sequence(slices, batch_first=True, padding_value=0.0).float()
-        bs, ms, _, _ = batched_slices.shape
-
-        # [batch size; most slices]
-        attention_mask = torch.zeros((bs, ms), dtype=torch.float)
-        for i, s in enumerate(slices):
-            attention_mask[i, : len(s)] = 1
-
-        return {
-            "slices": batched_slices,
-            "attention_mask": attention_mask,
-            "labels": torch.tensor(labels, dtype=torch.float),
-        }
+        return collate_batch_common(batch)
 
 
 class VTRDatasetOCR(Dataset):
@@ -91,22 +95,9 @@ class VTRDatasetOCR(Dataset):
     def collate_function(
         self, batch: list[tuple[torch.Tensor, int, list[str]]]
     ) -> dict[str, torch.Tensor | list[list[str]]]:
-        slices = [item[0] for item in batch]
-        labels = [item[1] for item in batch]
+        collated_batch = collate_batch_common(batch)
+
         texts = [item[2] for item in batch]
+        collated_batch["texts"] = texts
 
-        # [batch size; most slices; font size; window size]
-        batched_slices = pad_sequence(slices, batch_first=True, padding_value=0.0).float()
-        bs, ms, _, _ = batched_slices.shape
-
-        # [batch size; most slices]
-        attention_mask = torch.zeros((bs, ms), dtype=torch.float)
-        for i, s in enumerate(slices):
-            attention_mask[i, : len(s)] = 1
-
-        return {
-            "slices": batched_slices,
-            "attention_mask": attention_mask,
-            "labels": torch.tensor(labels, dtype=torch.float),
-            "texts": texts,
-        }
+        return collated_batch
