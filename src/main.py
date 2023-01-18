@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, Namespace
 
 from loguru import logger
-from torch.nn import BCEWithLogitsLoss
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
 
 from src.datasets.bert_dataset import BERTDataset
 from src.datasets.bert_dataset_sl import BERTDatasetSL
@@ -93,7 +93,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
-    criterion = BCEWithLogitsLoss()
+    criterion = CrossEntropyLoss()
 
     train_dataset = VTRDataset(
         train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
