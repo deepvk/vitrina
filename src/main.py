@@ -82,7 +82,7 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
 
 def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
     logger.info("Training Visual Token Representation Encoder for sequence classification.")
-    ocr_flag = False if args.no_ocr else True
+    ocr_flag = not args.no_ocr
     logger.info(f"OCR: {ocr_flag}")
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
