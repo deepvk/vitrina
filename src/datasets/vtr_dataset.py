@@ -53,5 +53,5 @@ class VTRDataset(Dataset):
         return {
             "slices": batched_slices,
             "attention_mask": attention_mask,
-            "labels": torch.tensor(labels, dtype=torch.float),
+            "labels": torch.tensor(labels, dtype=torch.int),
         }
