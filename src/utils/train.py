@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 from transformers import get_linear_schedule_with_warmup
 
 from src.utils.common import set_deterministic_mode, dict_to_device
-from src.utils.config import TrainingConfig
+from src.utils.config import TrainingConfig, TransformerConfig
 
 WANDB_PROJECT_NAME = "visual-text"
 
@@ -22,6 +22,7 @@ def train(
     train_dataset: Dataset,
     criterion: nn.Module,
     config: TrainingConfig,
+    model_config: TransformerConfig,
     *,
     sl: bool,
     val_dataset: Dataset = None,
@@ -108,10 +109,10 @@ def train(
     logger.info("Training finished")
 
     if val_dataloader is not None:
-        evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
+        evaluate_model(model, val_dataloader, device, sl, log=True, group="val", num_classes=model_config.num_classes)
 
     if test_dataloader is not None:
-        evaluate_model(model, test_dataloader, device, sl, log=True, group="test")
+        evaluate_model(model, test_dataloader, device, sl, log=True, group="test", num_classes=model_config.num_classes)
 
     logger.info(f"Saving model")
     torch.save(model.state_dict(), join(wandb.run.dir, "last.ckpt"))
@@ -119,7 +120,7 @@ def train(
 
 @torch.no_grad()
 def evaluate_model(
-    model: nn.Module, dataloader: DataLoader, device: str, sl: bool, *, log: bool = True, group: str = ""
+    model: nn.Module, dataloader: DataLoader, device: str, sl: bool, *, log: bool = True, group: str = "", num_classes: int
 ) -> dict[str, float]:
     if log:
         logger.info(f"Evaluating the model on {group} set")
@@ -145,8 +146,9 @@ def evaluate_model(
 
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
-
-    precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average="micro")
+    
+    average = "binary" if num_classes == 2 else "micro"
+    precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average=average)
     accuracy = accuracy_score(ground_truth, predictions)
     result = {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1_score}
 
