@@ -43,17 +43,18 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
 
+    train_dataset = BERTDataset(train_data, args.tokenizer, training_config.max_seq_len)
+    val_dataset = BERTDataset(val_data, args.tokenizer, training_config.max_seq_len) if val_data else None
+    test_dataset = BERTDataset(test_data, args.tokenizer, training_config.max_seq_len) if test_data else None
+
     model = TokensToxicClassifier(
+        vocab_size=train_dataset.tokenizer.vocab_size,
         num_layers=model_config.num_layers,
         hidden_size=model_config.emb_size,
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
     criterion = BCEWithLogitsLoss()
-
-    train_dataset = BERTDataset(train_data, args.tokenizer, training_config.max_seq_len)
-    val_dataset = BERTDataset(val_data, args.tokenizer, training_config.max_seq_len) if val_data else None
-    test_dataset = BERTDataset(test_data, args.tokenizer, training_config.max_seq_len) if test_data else None
 
     train(
         model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
@@ -65,17 +66,18 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
 
+    train_dataset = BERTDatasetSL(train_data, args.tokenizer, training_config.max_seq_len)
+    val_dataset = BERTDatasetSL(val_data, args.tokenizer, training_config.max_seq_len) if val_data else None
+    test_dataset = BERTDatasetSL(test_data, args.tokenizer, training_config.max_seq_len) if test_data else None
+
     model = TextTokensSequenceLabeler(
+        vocab_size=train_dataset.tokenizer.vocab_size,
         num_layers=model_config.num_layers,
         hidden_size=model_config.emb_size,
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
     criterion = BceLossForTokenClassification()
-
-    train_dataset = BERTDatasetSL(train_data, args.tokenizer, training_config.max_seq_len)
-    val_dataset = BERTDatasetSL(val_data, args.tokenizer, training_config.max_seq_len) if val_data else None
-    test_dataset = BERTDatasetSL(test_data, args.tokenizer, training_config.max_seq_len) if test_data else None
 
     train(model, train_dataset, criterion, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
 
