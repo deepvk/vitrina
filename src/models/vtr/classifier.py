@@ -75,5 +75,5 @@ class VisualToxicClassifier(nn.Module):
 
         encoder_output = encoder_output.mean(dim=1)  # batch_size, emb_size
         encoder_output = self.norm(encoder_output)  # batch_size, emb_size
-        result = self.classifier(encoder_output).squeeze(1)  # batch_size
+        result = self.classifier(encoder_output)  # batch_size, num_classes
         return result
