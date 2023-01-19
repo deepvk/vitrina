@@ -82,8 +82,7 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
 
 def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
     logger.info("Training Visual Token Representation Encoder for sequence classification.")
-    ocr_flag = not args.no_ocr
-    logger.info(f"OCR: {ocr_flag}")
+    logger.info(f"OCR: {not args.no_ocr}")
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
     vtr = VTRConfig.from_arguments(args)
@@ -97,16 +96,33 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         hidden_size=model_config.emb_size,
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
-        ocr_flag=ocr_flag,
+        ocr_flag=not args.no_ocr,
     )
     criterion = BCEWithLogitsLoss()
 
-    if ocr_flag:
-        train_dataset: Dataset = VTRDatasetOCR(
-            train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
+    if args.no_ocr:
+        train_dataset: Dataset = VTRDataset(
+            train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
         )
 
         val_dataset: Dataset = (
+            VTRDataset(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
+            if val_data
+            else None
+        )
+
+        test_dataset: Dataset = (
+            VTRDataset(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
+            if test_data
+            else None
+        )
+
+    else:
+        train_dataset = VTRDatasetOCR(
+            train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
+        )
+
+        val_dataset = (
             VTRDatasetOCR(
                 val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
             )
@@ -114,27 +130,10 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             else None
         )
 
-        test_dataset: Dataset = (
+        test_dataset = (
             VTRDatasetOCR(
                 test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
             )
-            if test_data
-            else None
-        )
-
-    else:
-        train_dataset = VTRDataset(
-            train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
-        )
-
-        val_dataset = (
-            VTRDataset(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
-            if val_data
-            else None
-        )
-
-        test_dataset = (
-            VTRDataset(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
             if test_data
             else None
         )
@@ -147,7 +146,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         sl=False,
         val_dataset=val_dataset,
         test_dataset=test_dataset,
-        ocr_flag=ocr_flag,
+        ocr_flag=not args.no_ocr,
     )
 
 
