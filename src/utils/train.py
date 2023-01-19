@@ -26,6 +26,7 @@ def train(
     sl: bool,
     val_dataset: Dataset = None,
     test_dataset: Dataset = None,
+    ocr_flag: bool = False,
 ):
     logger.info(f"Fix random state: {config.random_state}")
     set_deterministic_mode(config.random_state)
@@ -87,30 +88,56 @@ def train(
             model.train()
 
             batch_num += 1
-            batch = dict_to_device(batch, except_keys={"max_word_len"}, device=device)
+            batch = dict_to_device(batch, except_keys={"max_word_len", "texts"}, device=device)
 
             optimizer.zero_grad()
-            prediction = model(batch)
-            loss = criterion(prediction, batch["labels"])
 
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+            if ocr_flag:
+                prediction, ctc_loss = model(batch)
+                bce_loss = criterion(prediction, batch["labels"])
+                loss = bce_loss + 0.4 * ctc_loss
 
-            wandb.log({"train/loss": loss, "train/learning_rate": scheduler.get_last_lr()[0]})
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
+
+                wandb.log(
+                    {
+                        "train/loss": loss,
+                        "train/learning_rate": scheduler.get_last_lr()[0],
+                        "train/bce_loss": bce_loss,
+                        "train/ctc_loss": ctc_loss,
+                    }
+                )
+
+            else:
+                prediction = model(batch)
+                loss = criterion(prediction, batch["labels"])
+
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
+
+                wandb.log(
+                    {
+                        "train/loss": loss,
+                        "train/learning_rate": scheduler.get_last_lr()[0],
+                    }
+                )
+
             pbar.desc = f"Epoch {epoch} / {config.epochs} | Train loss: {round(loss.item(), 3)}"
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
-                evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
+                evaluate_model(model, val_dataloader, device, sl, ocr_flag, log=True, group="val")
     pbar.close()
     logger.info("Training finished")
 
     if val_dataloader is not None:
-        evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
+        evaluate_model(model, val_dataloader, device, sl, ocr_flag, log=True, group="val")
 
     if test_dataloader is not None:
-        evaluate_model(model, test_dataloader, device, sl, log=True, group="test")
+        evaluate_model(model, test_dataloader, device, sl, ocr_flag, log=True, group="test")
 
     logger.info(f"Saving model")
     torch.save(model.state_dict(), join(wandb.run.dir, "last.ckpt"))
@@ -118,7 +145,14 @@ def train(
 
 @torch.no_grad()
 def evaluate_model(
-    model: nn.Module, dataloader: DataLoader, device: str, sl: bool, *, log: bool = True, group: str = ""
+    model: nn.Module,
+    dataloader: DataLoader,
+    device: str,
+    sl: bool,
+    ocr_flag: bool,
+    *,
+    log: bool = True,
+    group: str = "",
 ) -> dict[str, float]:
     if log:
         logger.info(f"Evaluating the model on {group} set")
@@ -127,8 +161,11 @@ def evaluate_model(
     ground_truth = []
     predictions = []
     for test_batch in tqdm(dataloader, leave=False):
-        batch = dict_to_device(test_batch, except_keys={"max_word_len"}, device=device)
-        output = model(batch)
+        batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
+        if ocr_flag:
+            output, _ = model(batch)
+        else:
+            output = model(batch)
 
         true_labels = test_batch["labels"]
 
@@ -147,7 +184,12 @@ def evaluate_model(
 
     precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average="binary")
     accuracy = accuracy_score(ground_truth, predictions)
-    result = {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1_score}
+    result = {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1_score,
+    }
 
     if group != "":
         result = {f"{group}/{k}": v for k, v in result.items()}
