@@ -8,10 +8,7 @@ from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer, VTRSlicerWithText
 
 
-def collate_batch_common(batch: list[tuple[torch.Tensor, int]] | list[tuple[torch.Tensor, int, list[str]]]):
-    slices = [item[0] for item in batch]
-    labels = [item[1] for item in batch]
-
+def collate_batch_common(slices: list[torch.Tensor], labels: list[int]):
     # [batch size; most slices; font size; window size]
     batched_slices = pad_sequence(slices, batch_first=True, padding_value=0.0).float()
     bs, ms, _, _ = batched_slices.shape
@@ -57,7 +54,8 @@ class VTRDataset(Dataset):
         return slices, sample["label"]
 
     def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
-        return collate_batch_common(batch)
+        slices, labels = [list(item) for item in zip(*batch)]
+        return collate_batch_common(slices, labels)
 
 
 class VTRDatasetOCR(Dataset):
@@ -95,9 +93,9 @@ class VTRDatasetOCR(Dataset):
     def collate_function(
         self, batch: list[tuple[torch.Tensor, int, list[str]]]
     ) -> dict[str, torch.Tensor | list[list[str]]]:
-        collated_batch = collate_batch_common(batch)
+        slices, labels, texts = [list(item) for item in zip(*batch)]
 
-        texts = [item[2] for item in batch]
+        collated_batch = collate_batch_common(slices, labels)
         collated_batch["texts"] = texts
 
         return collated_batch
