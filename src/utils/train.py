@@ -22,7 +22,6 @@ def train(
     train_dataset: Dataset,
     criterion: nn.Module,
     config: TrainingConfig,
-    model_config: TransformerConfig,
     *,
     sl: bool,
     val_dataset: Dataset = None,
@@ -108,10 +107,10 @@ def train(
     logger.info("Training finished")
 
     if val_dataloader is not None:
-        evaluate_model(model, val_dataloader, device, sl, log=True, group="val", num_classes=model_config.num_classes)
+        evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
 
     if test_dataloader is not None:
-        evaluate_model(model, test_dataloader, device, sl, log=True, group="test", num_classes=model_config.num_classes)
+        evaluate_model(model, test_dataloader, device, sl, log=True, group="test")
 
     logger.info(f"Saving model")
     torch.save(model.state_dict(), join(wandb.run.dir, "last.ckpt"))
@@ -119,12 +118,13 @@ def train(
 
 @torch.no_grad()
 def evaluate_model(
-    model: nn.Module, dataloader: DataLoader, device: str, sl: bool, *, log: bool = True, group: str = "", num_classes: int
+    model: nn.Module, dataloader: DataLoader, device: str, sl: bool, *, log: bool = True, group: str = ""
 ) -> dict[str, float]:
     if log:
         logger.info(f"Evaluating the model on {group} set")
 
     model.eval()
+    num_classes = model.classifier.out_features
     ground_truth = []
     predictions = []
     for test_batch in tqdm(dataloader, leave=False):
