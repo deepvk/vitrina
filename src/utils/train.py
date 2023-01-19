@@ -92,7 +92,6 @@ def train(
 
             optimizer.zero_grad()
             prediction = model(batch)
-            batch["labels"] = batch["labels"].to(torch.int64)
             loss = criterion(prediction, batch["labels"])
 
             loss.backward()
