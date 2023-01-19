@@ -15,6 +15,7 @@ class TokensToxicClassifier(nn.Module):
         type_vocab_size: int = 1,
         num_layers: int = 1,
         dropout: float = 0.0,
+        num_classes: int = 2,
     ):
         super().__init__()
         logger.info(f"Initializing vanilla BERT classifier | hidden size: {hidden_size}, # layers: {num_layers}")
