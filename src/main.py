@@ -111,7 +111,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     )
 
     train(
-        model, train_dataset, criterion, training_config, model_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
+        model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
     )
 
 
