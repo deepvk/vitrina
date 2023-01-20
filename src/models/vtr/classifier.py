@@ -36,6 +36,7 @@ class VisualToxicClassifier(nn.Module):
         hidden_size: int = 768,
         num_attention_heads: int = 12,
         num_layers: int = 1,
+        num_classes: int = 2,
         dropout: float = 0.0,
         out_channels: int = 32,
     ):
@@ -61,7 +62,7 @@ class VisualToxicClassifier(nn.Module):
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.norm = nn.LayerNorm(hidden_size)
-        self.classifier = nn.Linear(hidden_size, 1)
+        self.classifier = nn.Linear(hidden_size, num_classes)
 
     def forward(self, input_batch: dict[str, torch.Tensor]) -> torch.Tensor:
         embeddings = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
@@ -74,5 +75,5 @@ class VisualToxicClassifier(nn.Module):
 
         encoder_output = encoder_output.mean(dim=1)  # batch_size, emb_size
         encoder_output = self.norm(encoder_output)  # batch_size, emb_size
-        result = self.classifier(encoder_output).squeeze(1)  # batch_size
+        result = self.classifier(encoder_output)  # batch_size, num_classes
         return result

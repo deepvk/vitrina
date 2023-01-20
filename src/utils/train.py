@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 from transformers import get_linear_schedule_with_warmup
 
 from src.utils.common import set_deterministic_mode, dict_to_device
-from src.utils.config import TrainingConfig
+from src.utils.config import TrainingConfig, TransformerConfig
 
 WANDB_PROJECT_NAME = "visual-text"
 
@@ -124,6 +124,7 @@ def evaluate_model(
         logger.info(f"Evaluating the model on {group} set")
 
     model.eval()
+    num_classes = model.classifier.out_features
     ground_truth = []
     predictions = []
     for test_batch in tqdm(dataloader, leave=False):
@@ -139,13 +140,14 @@ def evaluate_model(
             true_labels = true_labels[mask]
             output = output.view(-1)[mask]
 
-        predictions.append((output > 0).to(torch.float).cpu().detach())
+        predictions.append(torch.argmax(output, dim=1).cpu().detach())
         ground_truth.append(true_labels.cpu().detach())
 
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
 
-    precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average="binary")
+    average = "binary" if num_classes == 2 else "micro"
+    precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average=average)
     accuracy = accuracy_score(ground_truth, predictions)
     result = {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1_score}
 

@@ -21,7 +21,7 @@ def collate_batch_common(slices: list[torch.Tensor], labels: list[int]):
     return {
         "slices": batched_slices,
         "attention_mask": attention_mask,
-        "labels": torch.tensor(labels, dtype=torch.float),
+        "labels": torch.tensor(labels, dtype=torch.int64),
     }
 
 
