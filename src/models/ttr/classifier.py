@@ -27,7 +27,7 @@ class TokensToxicClassifier(nn.Module):
             num_attention_heads=num_attention_heads,
             num_hidden_layers=num_hidden_layers,
             type_vocab_size=type_vocab_size,
-            num_labels=num_layers,
+            num_labels=num_classes,
             hidden_dropout_prob=dropout,
             attention_probs_dropout_prob=dropout,
         )
@@ -41,4 +41,4 @@ class TokensToxicClassifier(nn.Module):
             token_type_ids=batch["token_type_ids"],
         )
 
-        return bert_output["logits"].squeeze(1)
+        return bert_output["logits"]
