@@ -146,7 +146,7 @@ def evaluate_model(
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
 
-    average = "binary" if num_classes == 2 else "micro"
+    average = "binary" if num_classes == 2 else "macro"
     precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average=average)
     accuracy = accuracy_score(ground_truth, predictions)
     result = {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1_score}
