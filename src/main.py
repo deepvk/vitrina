@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, Namespace
 
 from loguru import logger
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
+from torch.nn import CrossEntropyLoss
 
 from src.datasets.bert_dataset import BERTDataset
 from src.datasets.bert_dataset_sl import BERTDatasetSL
@@ -43,10 +43,11 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
     model = TokensToxicClassifier(
         num_layers=model_config.num_layers,
         hidden_size=model_config.emb_size,
+        num_classes=model_config.num_classes,
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
-    criterion = BCEWithLogitsLoss()
+    criterion = CrossEntropyLoss()
 
     train_dataset = BERTDataset(train_data, args.tokenizer, training_config.max_seq_len)
     val_dataset = BERTDataset(val_data, args.tokenizer, training_config.max_seq_len) if val_data else None
