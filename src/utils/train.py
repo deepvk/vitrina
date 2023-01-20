@@ -124,7 +124,7 @@ def evaluate_model(
         logger.info(f"Evaluating the model on {group} set")
 
     model.eval()
-    num_classes = model.classifier.out_features
+    num_classes = model.num_classes
     ground_truth = []
     predictions = []
     for test_batch in tqdm(dataloader, leave=False):
