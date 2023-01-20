@@ -32,6 +32,7 @@ class TokensToxicClassifier(nn.Module):
             attention_probs_dropout_prob=dropout,
         )
         self.model = BertForSequenceClassification(model_config)
+        self.num_classes = num_classes
 
     def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
         bert_output = self.model(
