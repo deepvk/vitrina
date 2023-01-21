@@ -156,13 +156,7 @@ def train(
 
 @torch.no_grad()
 def evaluate_model(
-    model: nn.Module,
-    dataloader: DataLoader,
-    device: str,
-    sl: bool,
-    *,
-    log: bool = True,
-    group: str = "",
+    model: nn.Module, dataloader: DataLoader, device: str, sl: bool, *, log: bool = True, group: str = ""
 ) -> dict[str, float]:
     if log:
         logger.info(f"Evaluating the model on {group} set")
@@ -172,7 +166,6 @@ def evaluate_model(
     predictions = []
     for test_batch in tqdm(dataloader, leave=False):
         batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
-
         output = model(batch)["logits"]
 
         true_labels = test_batch["labels"]
