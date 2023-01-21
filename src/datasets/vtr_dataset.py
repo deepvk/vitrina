@@ -72,10 +72,10 @@ class VTRDatasetOCR(Dataset):
         logger.info(f"Initializing VTRDatasetOCR with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
 
         self.labeled_texts = []
-        char_set = set()
+        self.char_set: set = set()
         for sample in labeled_texts:
             self.labeled_texts.append({"text": clean_text(sample["text"]), "label": sample["label"]})
-            char_set = set.union(char_set, set(self.labeled_texts[-1]["text"]))
+            self.char_set = set.union(self.char_set, set(self.labeled_texts[-1]["text"]))
 
         self.max_seq_len = max_seq_len
 

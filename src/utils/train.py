@@ -17,17 +17,18 @@ from torch.nn.utils.rnn import pad_sequence
 from src.utils.common import set_deterministic_mode, dict_to_device
 from src.utils.config import TrainingConfig
 from src.utils.common import char2int
+from src.datasets.vtr_dataset import VTRDatasetOCR
 
 
 WANDB_PROJECT_NAME = "visual-text"
 
 
-def compute_ctc_loss(criterion, logits, texts):
+def compute_ctc_loss(criterion: torch.nn.modules.loss.CTCLoss, logits: torch.Tensor, texts: list, char_set: set):
     log_probs = torch.nn.functional.log_softmax(logits, dim=2)
     input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
 
     chars = list("".join(np.concatenate(texts).flatten()))
-    targets = char2int(chars)
+    targets = char2int(chars, char_set)
 
     get_len = np.vectorize(len)
     target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
@@ -120,7 +121,10 @@ def train(
             loss = criterion(model_output["logits"], batch["labels"])
 
             if ocr_flag:
-                ctc_loss = compute_ctc_loss(ctc_criterion, model_output["ocr logits"], batch["texts"])
+                assert isinstance(train_dataset, VTRDatasetOCR)
+                ctc_loss = compute_ctc_loss(
+                    ctc_criterion, model_output["ocr logits"], batch["texts"], train_dataset.char_set
+                )
 
                 log_dict["train/ctc_loss"] = ctc_loss
                 log_dict["train/bce_loss"] = loss

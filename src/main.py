@@ -88,21 +88,17 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     training_config = TrainingConfig.from_arguments(args)
     vtr = VTRConfig.from_arguments(args)
 
-    model = VisualToxicClassifier(
-        height=vtr.font_size,
-        width=vtr.window_size,
-        kernel_size=vtr.kernel_size,
-        out_channels=vtr.out_channels,
-        num_layers=model_config.num_layers,
-        hidden_size=model_config.emb_size,
-        num_attention_heads=model_config.n_head,
-        dropout=model_config.dropout,
-        ocr_flag=not args.no_ocr,
-        hidden_size_ocr=vtr.hidden_size_ocr,
-        num_layers_ocr=vtr.num_layers_ocr,
-        num_classes_ocr=vtr.num_classes_ocr,
-    )
-    criterion = BCEWithLogitsLoss()
+    params = {
+        "height": vtr.font_size,
+        "width": vtr.window_size,
+        "kernel_size": vtr.kernel_size,
+        "out_channels": vtr.out_channels,
+        "num_layers": model_config.num_layers,
+        "hidden_size": model_config.emb_size,
+        "num_attention_heads": model_config.n_head,
+        "dropout": model_config.dropout,
+        "ocr_flag": not args.no_ocr,
+    }
 
     if args.no_ocr:
         train_dataset: Dataset = VTRDataset(
@@ -141,6 +137,17 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             if test_data
             else None
         )
+
+        params.update(
+            {
+                "hidden_size_ocr": vtr.hidden_size_ocr,
+                "num_layers_ocr": vtr.num_layers_ocr,
+                "num_classes_ocr": len(train_dataset.char_set),
+            }
+        )
+
+    model = VisualToxicClassifier(**params)
+    criterion = BCEWithLogitsLoss()
 
     train(
         model,
