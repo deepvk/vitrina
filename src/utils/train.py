@@ -10,11 +10,32 @@ from torch.optim import AdamW
 from torch.utils.data import Dataset, DataLoader
 from tqdm.auto import tqdm
 from transformers import get_linear_schedule_with_warmup
+from torch.nn import CTCLoss
+import numpy as np
+from torch.nn.utils.rnn import pad_sequence
 
 from src.utils.common import set_deterministic_mode, dict_to_device
 from src.utils.config import TrainingConfig
+from src.utils.common import char2int
+
 
 WANDB_PROJECT_NAME = "visual-text"
+
+
+def compute_ctc_loss(criterion, logits, texts):
+    log_probs = torch.nn.functional.log_softmax(logits, dim=2)
+    input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
+
+    chars = list("".join(np.concatenate(texts).flatten()))
+    targets = char2int(chars)
+
+    get_len = np.vectorize(len)
+    target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
+
+    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
+    ctc_loss /= input_lengths.shape[0]
+
+    return ctc_loss
 
 
 def train(
@@ -69,6 +90,8 @@ def train(
     logger.info(f"Parameters count: {parameters_count}")
     model.to(device)
 
+    ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
+
     logger.info(f"Using AdamW optimizer | lr: {config.lr}")
     optimizer = AdamW(model.parameters(), config.lr, betas=(config.beta1, config.beta2))
     num_training_steps = len(train_dataloader) * config.epochs
@@ -83,6 +106,7 @@ def train(
     logger.info(f"Start training for {config.epochs} epochs")
     pbar = tqdm(total=num_training_steps)
     batch_num = 0
+    log_dict = {}
     for epoch in range(1, config.epochs + 1):
         for batch in train_dataloader:
             model.train()
@@ -92,52 +116,39 @@ def train(
 
             optimizer.zero_grad()
 
+            model_output = model(batch)
+            loss = criterion(model_output["logits"], batch["labels"])
+
             if ocr_flag:
-                prediction, ctc_loss = model(batch)
-                bce_loss = criterion(prediction, batch["labels"])
-                loss = bce_loss + 0.4 * ctc_loss
+                ctc_loss = compute_ctc_loss(ctc_criterion, model_output["ocr logits"], batch["texts"])
 
-                loss.backward()
-                optimizer.step()
-                scheduler.step()
+                log_dict["train/ctc_loss"] = ctc_loss
+                log_dict["train/bce_loss"] = loss
 
-                wandb.log(
-                    {
-                        "train/loss": loss,
-                        "train/learning_rate": scheduler.get_last_lr()[0],
-                        "train/bce_loss": bce_loss,
-                        "train/ctc_loss": ctc_loss,
-                    }
-                )
+                loss += 0.4 * ctc_loss
 
-            else:
-                prediction = model(batch)
-                loss = criterion(prediction, batch["labels"])
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
 
-                loss.backward()
-                optimizer.step()
-                scheduler.step()
+            log_dict["train/loss"] = loss
+            log_dict["train/learning_rate"] = scheduler.get_last_lr()[0]
 
-                wandb.log(
-                    {
-                        "train/loss": loss,
-                        "train/learning_rate": scheduler.get_last_lr()[0],
-                    }
-                )
+            wandb.log(log_dict)
 
             pbar.desc = f"Epoch {epoch} / {config.epochs} | Train loss: {round(loss.item(), 3)}"
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
-                evaluate_model(model, val_dataloader, device, sl, ocr_flag, log=True, group="val")
+                evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
     pbar.close()
     logger.info("Training finished")
 
     if val_dataloader is not None:
-        evaluate_model(model, val_dataloader, device, sl, ocr_flag, log=True, group="val")
+        evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
 
     if test_dataloader is not None:
-        evaluate_model(model, test_dataloader, device, sl, ocr_flag, log=True, group="test")
+        evaluate_model(model, test_dataloader, device, sl, log=True, group="test")
 
     logger.info(f"Saving model")
     torch.save(model.state_dict(), join(wandb.run.dir, "last.ckpt"))
@@ -149,7 +160,6 @@ def evaluate_model(
     dataloader: DataLoader,
     device: str,
     sl: bool,
-    ocr_flag: bool,
     *,
     log: bool = True,
     group: str = "",
@@ -162,10 +172,8 @@ def evaluate_model(
     predictions = []
     for test_batch in tqdm(dataloader, leave=False):
         batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
-        if ocr_flag:
-            output, _ = model(batch)
-        else:
-            output = model(batch)
+
+        output = model(batch)["logits"]
 
         true_labels = test_batch["labels"]
 
@@ -184,12 +192,7 @@ def evaluate_model(
 
     precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average="binary")
     accuracy = accuracy_score(ground_truth, predictions)
-    result = {
-        "accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1": f1_score,
-    }
+    result = {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1_score}
 
     if group != "":
         result = {f"{group}/{k}": v for k, v in result.items()}

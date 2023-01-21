@@ -1,14 +1,9 @@
 import torch
 from loguru import logger
 from torch import nn
-from torch.nn import CTCLoss
-from torch.nn.utils.rnn import pad_sequence
-import numpy as np
 
 from src.models.vtr.embedder import VisualEmbedder
 from src.models.vtr.ocr import OCRHead
-
-from src.utils.common import char2int
 
 
 class PositionalEncoding(nn.Module):
@@ -81,7 +76,7 @@ class VisualToxicClassifier(nn.Module):
         )
         self.ocr_flag = ocr_flag
 
-    def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor] | torch.Tensor:
+    def forward(self, input_batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         embeddings, conv = self.embedder(input_batch["slices"])  # batch_size, seq_len, emb_size
         embeddings = self.positional(embeddings)
 
@@ -92,28 +87,12 @@ class VisualToxicClassifier(nn.Module):
 
         encoder_output = encoder_output.mean(dim=1)  # batch_size, emb_size
         encoder_output = self.norm(encoder_output)  # batch_size, emb_size
-        result = self.classifier(encoder_output).squeeze(1)  # batch_size
+        logits = self.classifier(encoder_output).squeeze(1)  # batch_size
+
+        result = {"logits": logits}
 
         # OCR
         if self.ocr_flag:
-            criterion = CTCLoss(reduction="sum", zero_infinity=True)
+            result["ocr logits"] = self.ocr(conv)
 
-            texts = list("".join(np.concatenate(input_batch["texts"]).flatten()))
-            targets = char2int(texts)
-
-            get_len = np.vectorize(len)
-            target_lengths = pad_sequence(
-                [torch.from_numpy(get_len(arr)) for arr in input_batch["texts"]], batch_first=True, padding_value=0
-            )
-
-            logits = self.ocr(conv)
-            log_probs = torch.nn.functional.log_softmax(logits, dim=2)
-            input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
-
-            ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
-            ctc_loss /= conv.shape[0]
-
-            return result, ctc_loss
-
-        else:
-            return result
+        return result
