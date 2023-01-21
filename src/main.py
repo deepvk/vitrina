@@ -84,7 +84,6 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
 
 def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
     logger.info("Training Visual Token Representation Encoder for sequence classification.")
-    logger.info(f"OCR: {not args.no_ocr}")
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
     vtr = VTRConfig.from_arguments(args)
@@ -99,6 +98,9 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
         ocr_flag=not args.no_ocr,
+        hidden_size_ocr=vtr.hidden_size_ocr,
+        num_layers_ocr=vtr.num_layers_ocr,
+        num_classes_ocr=vtr.num_classes_ocr,
     )
     criterion = BCEWithLogitsLoss()
 

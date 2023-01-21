@@ -45,9 +45,16 @@ class VisualToxicClassifier(nn.Module):
         dropout: float = 0.0,
         out_channels: int = 32,
         ocr_flag: bool = True,
+        hidden_size_ocr: int = 256,
+        num_layers_ocr: int = 2,
+        num_classes_ocr: int = 44,
     ):
         super().__init__()
         logger.info(f"Initializing VTR classifier | hidden size: {hidden_size}, # layers: {num_layers}")
+        if ocr_flag:
+            logger.info(
+                f"OCR parameters: hidden size: {hidden_size_ocr}, # layers: {num_layers_ocr}, # classes: {num_classes_ocr}"
+            )
 
         self.embedder = VisualEmbedder(
             height=height,
@@ -69,7 +76,9 @@ class VisualToxicClassifier(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.norm = nn.LayerNorm(hidden_size)
         self.classifier = nn.Linear(hidden_size, 1)
-        self.ocr = OCRHead(input_size=256, hidden_size=256, num_layers=2, num_classes=60)
+        self.ocr = OCRHead(
+            input_size=out_channels, hidden_size=hidden_size_ocr, num_layers=num_layers_ocr, num_classes=num_classes_ocr
+        )
         self.ocr_flag = ocr_flag
 
     def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor] | torch.Tensor:
