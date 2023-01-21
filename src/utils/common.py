@@ -95,7 +95,7 @@ def dict_to_device(
 
 
 def clean_text(text: str):
-    """
+
     text = re.sub(_MENTION_REGEXP, "", text)
     text = re.sub(_HTML_ESCAPE_CHR_REGEXP, " ", text)
     text = re.sub(_URL_REGEXP, " ", text)
@@ -104,9 +104,8 @@ def clean_text(text: str):
     text = re.sub(_BOM_REGEXP, " ", text)
     text = re.sub(_ZERO_WIDTH_SPACE_REGEXP, "", text)
     text = re.sub(_EMOJI, "", text)
-    """
 
-    text = re.sub(_REG, "", text)
+    # text = re.sub(_REG, "", text)
 
     return text
 

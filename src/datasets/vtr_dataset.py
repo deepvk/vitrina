@@ -70,7 +70,13 @@ class VTRDatasetOCR(Dataset):
         ratio: float = 0.7,
     ):
         logger.info(f"Initializing VTRDatasetOCR with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
-        self.labeled_texts = labeled_texts
+
+        self.labeled_texts = []
+        char_set = set()
+        for sample in labeled_texts:
+            self.labeled_texts.append({"text": clean_text(sample["text"]), "label": sample["label"]})
+            char_set = set.union(char_set, set(self.labeled_texts[-1]["text"]))
+
         self.max_seq_len = max_seq_len
 
         self.slicer = VTRSlicerWithText(
@@ -82,10 +88,9 @@ class VTRDatasetOCR(Dataset):
 
     def __getitem__(self, index) -> tuple[torch.Tensor, int, list[str]]:
         sample = self.labeled_texts[index]
-        raw_text = clean_text(sample["text"])
 
         # [n slices; font size; window size]
-        slices, slice_text = self.slicer(raw_text)
+        slices, slice_text = self.slicer(sample["text"])
         slices = slices[: self.max_seq_len]
         slice_text = slice_text[: self.max_seq_len]
         return slices, sample["label"], slice_text
