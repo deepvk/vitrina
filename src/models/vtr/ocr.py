@@ -1,9 +1,9 @@
 from torch import nn
 
 
-class BiLSTM(nn.Module):
+class OCRHead(nn.Module):
     def __init__(self, input_size=256, hidden_size=1024, num_layers=2, num_classes=44):
-        super(BiLSTM, self).__init__()
+        super(OCRHead, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 

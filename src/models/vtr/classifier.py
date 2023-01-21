@@ -6,7 +6,7 @@ from torch.nn.utils.rnn import pad_sequence
 import numpy as np
 
 from src.models.vtr.embedder import VisualEmbedder
-from src.models.vtr.ocr import BiLSTM
+from src.models.vtr.ocr import OCRHead
 
 from src.utils.common import char2int
 
@@ -69,7 +69,7 @@ class VisualToxicClassifier(nn.Module):
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.norm = nn.LayerNorm(hidden_size)
         self.classifier = nn.Linear(hidden_size, 1)
-        self.ocr = BiLSTM(input_size=256, hidden_size=256, num_layers=2, num_classes=60)
+        self.ocr = OCRHead(input_size=256, hidden_size=256, num_layers=2, num_classes=60)
         self.ocr_flag = ocr_flag
 
     def forward(self, input_batch: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor] | torch.Tensor:
