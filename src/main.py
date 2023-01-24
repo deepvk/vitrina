@@ -88,65 +88,34 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     training_config = TrainingConfig.from_arguments(args)
     vtr = VTRConfig.from_arguments(args)
 
-    params = {
-        "height": vtr.font_size,
-        "width": vtr.window_size,
-        "kernel_size": vtr.kernel_size,
-        "out_channels": vtr.out_channels,
-        "num_layers": model_config.num_layers,
-        "hidden_size": model_config.emb_size,
-        "num_attention_heads": model_config.n_head,
-        "dropout": model_config.dropout,
-        "ocr_flag": not args.no_ocr,
-    }
-
+    model_args = (
+        vtr.font_size,
+        vtr.window_size,
+        vtr.kernel_size,
+        training_config.max_seq_len,
+        model_config.emb_size,
+        model_config.n_head,
+        model_config.num_layers,
+        model_config.dropout,
+        vtr.out_channels,
+        not args.no_ocr,
+    )
+    dataset_args = (vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
     if args.no_ocr:
-        train_dataset: Dataset = VTRDataset(
-            train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
-        )
+        train_dataset: Dataset = VTRDataset(train_data, *dataset_args)
+        val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
+        test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
 
-        val_dataset: Dataset = (
-            VTRDataset(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
-            if val_data
-            else None
-        )
-
-        test_dataset: Dataset = (
-            VTRDataset(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
-            if test_data
-            else None
-        )
+        model = VisualToxicClassifier(*model_args)
 
     else:
-        train_dataset = VTRDatasetOCR(
-            train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
-        )
+        train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
+        val_dataset = VTRDatasetOCR(val_data, ratio=vtr.ratio, *dataset_args) if val_data else None
+        test_dataset = VTRDatasetOCR(test_data, ratio=vtr.ratio, *dataset_args) if test_data else None
 
-        val_dataset = (
-            VTRDatasetOCR(
-                val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
-            )
-            if val_data
-            else None
-        )
+        model_args_ocr = model_args + (vtr.hidden_size_ocr, vtr.num_layers_ocr, len(train_dataset.char_set))
+        model = VisualToxicClassifier(*model_args_ocr)
 
-        test_dataset = (
-            VTRDatasetOCR(
-                test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len, vtr.ratio
-            )
-            if test_data
-            else None
-        )
-
-        params.update(
-            {
-                "hidden_size_ocr": vtr.hidden_size_ocr,
-                "num_layers_ocr": vtr.num_layers_ocr,
-                "num_classes_ocr": len(train_dataset.char_set),
-            }
-        )
-
-    model = VisualToxicClassifier(**params)
     criterion = BCEWithLogitsLoss()
 
     train(
@@ -179,23 +148,12 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
     )
     criterion = BceLossForTokenClassification()
 
-    train_dataset = VTRDatasetSL(
-        train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
-    )
-    val_dataset = (
-        VTRDatasetSL(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
-        if val_data
-        else None
-    )
-    test_dataset = (
-        VTRDatasetSL(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
-        if test_data
-        else None
-    )
+    dataset_args = (vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
+    train_dataset = VTRDatasetSL(train_data, *dataset_args)
+    val_dataset = VTRDatasetSL(val_data, *dataset_args) if val_data else None
+    test_dataset = VTRDatasetSL(test_data, *dataset_args) if test_data else None
 
-    train(
-        model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
-    )
+    train(model, train_dataset, criterion, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
 
 
 def main(args: Namespace):
