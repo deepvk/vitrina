@@ -6,7 +6,9 @@ from tokenizers.implementations import BertWordPieceTokenizer
 from src.utils.common import load_json
 
 
-def train_tokenizer(data_path: str = "resources/data/noisy_dataset.jsonl", save_to: str = "tokenizer"):
+def train_tokenizer(
+    data_path: str = "resources/data/noisy_dataset.jsonl", save_to: str = "tokenizer", vocab_size: int = 30_000
+):
     """
     Trains the WordPiece tokenizer. Used to operate a classic transformer encoder.
 
@@ -29,7 +31,7 @@ def train_tokenizer(data_path: str = "resources/data/noisy_dataset.jsonl", save_
 
     bert_tokenizer.train_from_iterator(
         texts,
-        vocab_size=30_000,
+        vocab_size=vocab_size,
         wordpieces_prefix="##",
         special_tokens=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"],
     )
@@ -45,6 +47,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, default=f"resources/data/noisy_dataset.jsonl")
     parser.add_argument("--save-to", type=str, default=f"tokenizer")
+    parser.add_argument("--vocab-size", type=int, default=30_000)
 
     args = parser.parse_args()
-    train_tokenizer(data_path=args.data, save_to=args.save_to)
+    train_tokenizer(data_path=args.data, save_to=args.save_to, vocab_size=args.vocab_size)
