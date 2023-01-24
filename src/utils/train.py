@@ -123,7 +123,7 @@ def train(
             if ocr_flag:
                 assert isinstance(train_dataset, VTRDatasetOCR)
                 ctc_loss = compute_ctc_loss(
-                    ctc_criterion, model_output["ocr logits"], batch["texts"], train_dataset.char_set
+                    ctc_criterion, model_output["ocr_logits"], batch["texts"], train_dataset.char_set
                 )
 
                 log_dict["train/ctc_loss"] = ctc_loss

@@ -75,7 +75,7 @@ class VTRDatasetOCR(Dataset):
         self.char_set: set = set()
         for sample in labeled_texts:
             self.labeled_texts.append({"text": clean_text(sample["text"]), "label": sample["label"]})
-            self.char_set = set.union(self.char_set, set(self.labeled_texts[-1]["text"]))
+            self.char_set |= set(self.labeled_texts[-1]["text"])
 
         self.max_seq_len = max_seq_len
 

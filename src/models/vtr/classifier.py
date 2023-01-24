@@ -93,6 +93,6 @@ class VisualToxicClassifier(nn.Module):
 
         # OCR
         if self.ocr_flag:
-            result["ocr logits"] = self.ocr(conv)
+            result["ocr_logits"] = self.ocr(conv)
 
         return result
