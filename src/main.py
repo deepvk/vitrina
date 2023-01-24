@@ -113,8 +113,12 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         val_dataset = VTRDatasetOCR(val_data, ratio=vtr.ratio, *dataset_args) if val_data else None
         test_dataset = VTRDatasetOCR(test_data, ratio=vtr.ratio, *dataset_args) if test_data else None
 
-        model_args_ocr = model_args + (vtr.hidden_size_ocr, vtr.num_layers_ocr, len(train_dataset.char_set))
-        model = VisualToxicClassifier(*model_args_ocr)
+        model = VisualToxicClassifier(
+            hidden_size_ocr=vtr.hidden_size_ocr,
+            num_layers_ocr=vtr.num_layers_ocr,
+            num_classes_ocr=len(train_dataset.char_set),
+            *model_args,
+        )
 
     criterion = BCEWithLogitsLoss()
 
