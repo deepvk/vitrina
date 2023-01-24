@@ -71,11 +71,16 @@ class VTRDatasetOCR(Dataset):
     ):
         logger.info(f"Initializing VTRDatasetOCR with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
 
-        self.labeled_texts = []
+        self.texts = []
+        self.labels = []
         self.char_set: set = set()
         for sample in labeled_texts:
-            self.labeled_texts.append({"text": clean_text(sample["text"]), "label": sample["label"]})
-            self.char_set |= set(self.labeled_texts[-1]["text"])
+            cleaned_text = clean_text(sample["text"])
+            if cleaned_text:
+                self.texts.append(cleaned_text)
+                self.labels.append(sample["label"])
+                self.char_set |= set(cleaned_text)
+        logger.info(f"Got {len(self.texts)} clean samples out of {len(labeled_texts)}")
 
         self.max_seq_len = max_seq_len
 
@@ -84,16 +89,16 @@ class VTRDatasetOCR(Dataset):
         )
 
     def __len__(self) -> int:
-        return len(self.labeled_texts)
+        return len(self.texts)
 
     def __getitem__(self, index) -> tuple[torch.Tensor, int, list[str]]:
-        sample = self.labeled_texts[index]
+        sample = self.texts[index]
 
         # [n slices; font size; window size]
-        slices, slice_text = self.slicer(sample["text"])
+        slices, slice_text = self.slicer(sample)
         slices = slices[: self.max_seq_len]
         slice_text = slice_text[: self.max_seq_len]
-        return slices, sample["label"], slice_text
+        return slices, self.labels[index], slice_text
 
     def collate_function(
         self, batch: list[tuple[torch.Tensor, int, list[str]]]
