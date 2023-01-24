@@ -1,4 +1,5 @@
 from argparse import ArgumentParser, Namespace
+from typing import TypedDict
 
 from loguru import logger
 from torch.nn import CrossEntropyLoss
@@ -101,23 +102,18 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         num_classes=model_config.num_classes,
         dropout=model_config.dropout,
     )
+
     criterion = CrossEntropyLoss()
-    
-    train_dataset: Dataset = VTRDataset(
-        train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
-     )
 
-    val_dataset: Dataset = (
-        VTRDataset(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
-        if val_data
-        else None
-    )
-
-    test_dataset: Dataset = (
-        VTRDataset(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
-        if test_data
-        else None
-    )
+    dataset_args = (vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
+    if args.no_ocr:
+        train_dataset: Dataset = VTRDataset(train_data, *dataset_args)
+        val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
+        test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
+    else:
+        train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
+        val_dataset = VTRDatasetOCR(val_data, ratio=vtr.ratio, *dataset_args) if val_data else None
+        test_dataset = VTRDatasetOCR(test_data, ratio=vtr.ratio, *dataset_args) if test_data else None
 
     train(
         model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
@@ -142,19 +138,10 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
     )
     criterion = BceLossForTokenClassification()
 
-    train_dataset = VTRDatasetSL(
-        train_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len
-    )
-    val_dataset = (
-        VTRDatasetSL(val_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
-        if val_data
-        else None
-    )
-    test_dataset = (
-        VTRDatasetSL(test_data, vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
-        if test_data
-        else None
-    )
+    dataset_args = (vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
+    train_dataset = VTRDatasetSL(train_data, *dataset_args)
+    val_dataset = VTRDatasetSL(val_data, *dataset_args) if val_data else None
+    test_dataset = VTRDatasetSL(test_data, *dataset_args) if test_data else None
 
     train(
         model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
