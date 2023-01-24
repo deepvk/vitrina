@@ -99,4 +99,3 @@ class VTRDatasetOCR(Dataset):
         collated_batch["texts"] = texts
 
         return collated_batch
-    
