@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 from transformers import get_linear_schedule_with_warmup
 
 from src.utils.common import set_deterministic_mode, dict_to_device
-from src.utils.config import TrainingConfig
+from src.utils.config import TrainingConfig, TransformerConfig
 
 WANDB_PROJECT_NAME = "visual-text"
 
