@@ -80,7 +80,7 @@ class TrainingConfig:
     random_state: int = 21
     log_every: int = 1000
     num_workers: int = 1
-        
+
     no_average: bool = False
 
     @classmethod
