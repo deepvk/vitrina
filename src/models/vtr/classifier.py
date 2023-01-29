@@ -72,7 +72,10 @@ class VisualToxicClassifier(nn.Module):
         self.norm = nn.LayerNorm(hidden_size)
         self.classifier = nn.Linear(hidden_size, 1)
         self.ocr = OCRHead(
-            input_size=out_channels, hidden_size=hidden_size_ocr, num_layers=num_layers_ocr, num_classes=num_classes_ocr
+            input_size=out_channels * (height // 2**3),
+            hidden_size=hidden_size_ocr,
+            num_layers=num_layers_ocr,
+            num_classes=num_classes_ocr,
         )
         self.ocr_flag = ocr_flag
 
