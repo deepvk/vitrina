@@ -2,6 +2,7 @@ import torch
 from loguru import logger
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
+from tqdm import tqdm
 
 from src.datasets.common import DatasetSample
 from src.utils.common import clean_text
@@ -74,7 +75,7 @@ class VTRDatasetOCR(Dataset):
         self.texts = []
         self.labels = []
         self.char_set: set = set()
-        for sample in labeled_texts:
+        for sample in tqdm(labeled_texts):
             cleaned_text = clean_text(sample["text"])
             if cleaned_text:
                 self.texts.append(cleaned_text)
