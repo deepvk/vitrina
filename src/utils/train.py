@@ -118,7 +118,7 @@ def train(
             optimizer.zero_grad()
 
             model_output = model(batch)
-            loss = criterion(model_output["logits"], batch["labels"])
+            loss = criterion(model_output["logits"], batch["labels"].to(torch.int64))
 
             if ocr_flag:
                 assert isinstance(train_dataset, VTRDatasetOCR)
