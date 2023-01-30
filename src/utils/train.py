@@ -129,7 +129,7 @@ def train(
                 log_dict["train/ctc_loss"] = ctc_loss
                 log_dict["train/bce_loss"] = loss
 
-                loss += 1 * ctc_loss
+                loss = loss + 1 * ctc_loss
 
             loss.backward()
             optimizer.step()
