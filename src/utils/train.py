@@ -169,7 +169,7 @@ def evaluate_model(
     num_classes = model.num_classes
     ground_truth = []
     predictions = []
-    for test_batch in tqdm(dataloader, leave=False):
+    for test_batch in tqdm(dataloader, leave=True, position=0):
         batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
         output = model(batch)["logits"]
 
