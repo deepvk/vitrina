@@ -1,5 +1,4 @@
 from argparse import ArgumentParser, Namespace
-from typing import TypedDict
 
 from loguru import logger
 from torch.nn import CrossEntropyLoss
@@ -98,6 +97,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         model_config.emb_size,
         model_config.n_head,
         model_config.num_layers,
+        model_config.num_classes,
         model_config.dropout,
         vtr.out_channels,
         not args.no_ocr,
