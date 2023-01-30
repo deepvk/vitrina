@@ -42,6 +42,6 @@ class BERTDataset(Dataset):
             padding=True,
             return_tensors="pt",
         )
-        tokenized_batch["labels"] = torch.tensor(labels, dtype=torch.float)
+        tokenized_batch["labels"] = torch.tensor(labels, dtype=torch.int64)
 
         return tokenized_batch

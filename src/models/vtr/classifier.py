@@ -37,6 +37,7 @@ class VisualToxicClassifier(nn.Module):
         hidden_size: int = 768,
         num_attention_heads: int = 12,
         num_layers: int = 1,
+        num_classes: int = 2,
         dropout: float = 0.0,
         out_channels: int = 32,
         ocr_flag: bool = True,
@@ -70,7 +71,8 @@ class VisualToxicClassifier(nn.Module):
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.norm = nn.LayerNorm(hidden_size)
-        self.classifier = nn.Linear(hidden_size, 1)
+        self.classifier = nn.Linear(hidden_size, num_classes)
+        self.num_classes = num_classes
         self.ocr = OCRHead(
             input_size=out_channels * (height // 2**3),
             hidden_size=hidden_size_ocr,
@@ -90,7 +92,7 @@ class VisualToxicClassifier(nn.Module):
 
         encoder_output = encoder_output.mean(dim=1)  # batch_size, emb_size
         encoder_output = self.norm(encoder_output)  # batch_size, emb_size
-        logits = self.classifier(encoder_output).squeeze(1)  # batch_size
+        logits = self.classifier(encoder_output)  # batch_size, num_classes
 
         result = {"logits": logits}
 
