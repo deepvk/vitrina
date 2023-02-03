@@ -1,5 +1,4 @@
 from argparse import ArgumentParser, Namespace
-from typing import TypedDict
 
 from loguru import logger
 from torch.nn import CrossEntropyLoss
@@ -86,36 +85,55 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
 
 def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
     logger.info("Training Visual Token Representation Encoder for sequence classification.")
-    logger.info(f"OCR: {not args.no_ocr}")
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
     vtr = VTRConfig.from_arguments(args)
 
-    model = VisualToxicClassifier(
-        height=vtr.font_size,
-        width=vtr.window_size,
-        kernel_size=vtr.kernel_size,
-        out_channels=vtr.out_channels,
-        num_layers=model_config.num_layers,
-        hidden_size=model_config.emb_size,
-        num_attention_heads=model_config.n_head,
-        num_classes=model_config.num_classes,
-        dropout=model_config.dropout,
+    model_args = (
+        vtr.font_size,
+        vtr.window_size,
+        vtr.kernel_size,
+        training_config.max_seq_len,
+        model_config.emb_size,
+        model_config.n_head,
+        model_config.num_layers,
+        model_config.num_classes,
+        model_config.dropout,
+        vtr.out_channels,
+        not args.no_ocr,
     )
-    criterion = CrossEntropyLoss()
 
     dataset_args = (vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
     if args.no_ocr:
         train_dataset: Dataset = VTRDataset(train_data, *dataset_args)
         val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
         test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
+
+        model = VisualToxicClassifier(*model_args)
+
     else:
         train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
         val_dataset = VTRDatasetOCR(val_data, ratio=vtr.ratio, *dataset_args) if val_data else None
         test_dataset = VTRDatasetOCR(test_data, ratio=vtr.ratio, *dataset_args) if test_data else None
 
+        model = VisualToxicClassifier(
+            hidden_size_ocr=vtr.hidden_size_ocr,
+            num_layers_ocr=vtr.num_layers_ocr,
+            num_classes_ocr=len(train_dataset.char_set),
+            *model_args,
+        )
+
+    criterion = CrossEntropyLoss()
+
     train(
-        model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
+        model,
+        train_dataset,
+        criterion,
+        training_config,
+        sl=False,
+        val_dataset=val_dataset,
+        test_dataset=test_dataset,
+        ocr_flag=not args.no_ocr,
     )
 
 
@@ -142,9 +160,7 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
     val_dataset = VTRDatasetSL(val_data, *dataset_args) if val_data else None
     test_dataset = VTRDatasetSL(test_data, *dataset_args) if test_data else None
 
-    train(
-        model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
-    )
+    train(model, train_dataset, criterion, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
 
 
 def main(args: Namespace):

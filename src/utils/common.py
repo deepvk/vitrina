@@ -71,6 +71,7 @@ def dict_to_device(
 
 
 def clean_text(text: str):
+
     text = re.sub(_MENTION_REGEXP, "", text)
     text = re.sub(_HTML_ESCAPE_CHR_REGEXP, " ", text)
     text = re.sub(_URL_REGEXP, " ", text)
@@ -78,6 +79,7 @@ def clean_text(text: str):
     text = re.sub(_HTML_CODED_CHR_REGEXP, " ", text)
     text = re.sub(_BOM_REGEXP, " ", text)
     text = re.sub(_ZERO_WIDTH_SPACE_REGEXP, "", text)
+
     return text
 
 
@@ -109,6 +111,13 @@ def _set_seed(seed: int):
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def char2int(text: list, char_set: set):
+    char2int_dict = {char: i + 1 for i, char in enumerate(char_set)}
+
+    targets = torch.LongTensor([char2int_dict[c] for c in text])
+    return targets
 
 
 class BceLossForTokenClassification(nn.Module):

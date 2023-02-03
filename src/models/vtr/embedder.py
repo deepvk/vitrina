@@ -123,9 +123,9 @@ class VisualEmbedder(nn.Module):
         conv = self.slice_conv(slices.view(batch_size * slice_count, 1, height, width))
 
         _, channels_count, h_out, w_out = conv.shape
-
         batched_conv = conv.view(batch_size, slice_count, channels_count * h_out * w_out)
-        return self.linear_bridge(batched_conv)  # [batch size, slice count, emb size]
+        return self.linear_bridge(batched_conv), conv  # [batch size, slice count, emb size],
+        # [batch size * slice count, out channels, emb height, emb width]
 
 
 class VisualEmbedderSL(VisualEmbedder):
