@@ -10,11 +10,33 @@ from torch.optim import AdamW
 from torch.utils.data import Dataset, DataLoader
 from tqdm.auto import tqdm
 from transformers import get_linear_schedule_with_warmup
+from torch.nn import CTCLoss
+import numpy as np
+from torch.nn.utils.rnn import pad_sequence
 
 from src.utils.common import set_deterministic_mode, dict_to_device
-from src.utils.config import TrainingConfig, TransformerConfig
+from src.utils.config import TrainingConfig
+from src.utils.common import char2int
+from src.datasets.vtr_dataset import VTRDatasetOCR
+
 
 WANDB_PROJECT_NAME = "visual-text"
+
+
+def compute_ctc_loss(criterion: torch.nn.modules.loss.CTCLoss, logits: torch.Tensor, texts: list, char_set: set):
+    log_probs = torch.nn.functional.log_softmax(logits, dim=2)
+    input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
+
+    chars = list("".join(np.concatenate(texts).flatten()))
+    targets = char2int(chars, char_set)
+
+    get_len = np.vectorize(len)
+    target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
+
+    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
+    ctc_loss /= input_lengths.shape[0]
+
+    return ctc_loss
 
 
 def train(
@@ -26,6 +48,7 @@ def train(
     sl: bool,
     val_dataset: Dataset = None,
     test_dataset: Dataset = None,
+    ocr_flag: bool = False,
 ):
     logger.info(f"Fix random state: {config.random_state}")
     set_deterministic_mode(config.random_state)
@@ -67,6 +90,8 @@ def train(
     logger.info(f"Parameters count: {parameters_count}")
     model.to(device)
 
+    ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
+
     logger.info(f"Using AdamW optimizer | lr: {config.lr}")
     optimizer = AdamW(model.parameters(), config.lr, betas=(config.beta1, config.beta2))
     num_training_steps = len(train_dataloader) * config.epochs
@@ -81,22 +106,39 @@ def train(
     logger.info(f"Start training for {config.epochs} epochs")
     pbar = tqdm(total=num_training_steps)
     batch_num = 0
+    log_dict = {}
     for epoch in range(1, config.epochs + 1):
         for batch in train_dataloader:
             model.train()
 
             batch_num += 1
-            batch = dict_to_device(batch, except_keys={"max_word_len"}, device=device)
+            batch = dict_to_device(batch, except_keys={"max_word_len", "texts"}, device=device)
 
             optimizer.zero_grad()
-            prediction = model(batch)
-            loss = criterion(prediction, batch["labels"])
+
+            model_output = model(batch)
+            loss = criterion(model_output["logits"], batch["labels"].to(torch.int64))
+
+            if ocr_flag:
+                assert isinstance(train_dataset, VTRDatasetOCR)
+                ctc_loss = compute_ctc_loss(
+                    ctc_criterion, model_output["ocr_logits"], batch["texts"], train_dataset.char_set
+                )
+
+                log_dict["train/ctc_loss"] = ctc_loss
+                log_dict["train/bce_loss"] = loss
+
+                loss = loss + 1 * ctc_loss
 
             loss.backward()
             optimizer.step()
             scheduler.step()
 
-            wandb.log({"train/loss": loss, "train/learning_rate": scheduler.get_last_lr()[0]})
+            log_dict["train/loss"] = loss
+            log_dict["train/learning_rate"] = scheduler.get_last_lr()[0]
+
+            wandb.log(log_dict)
+
             pbar.desc = f"Epoch {epoch} / {config.epochs} | Train loss: {round(loss.item(), 3)}"
             pbar.update()
 
@@ -133,9 +175,9 @@ def evaluate_model(
     num_classes = model.num_classes
     ground_truth = []
     predictions = []
-    for test_batch in tqdm(dataloader, leave=False):
-        batch = dict_to_device(test_batch, except_keys={"max_word_len"}, device=device)
-        output = model(batch)
+    for test_batch in tqdm(dataloader, leave=False, position=0):
+        batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
+        output = model(batch)["logits"]
 
         true_labels = test_batch["labels"]
 

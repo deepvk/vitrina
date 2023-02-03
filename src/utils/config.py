@@ -10,6 +10,8 @@ class VTRConfig:
     stride: int
     kernel_size: int
     out_channels: int
+    hidden_size_ocr: int
+    num_layers_ocr: int
     ratio: float
     max_slices_count_per_word: int = None
 
@@ -33,6 +35,9 @@ class VTRConfig:
         arg_parser.add_argument(
             "--out-channels", type=int, default=256, help="Number of output channels in the last convolutional layer."
         )
+
+        arg_parser.add_argument("--hidden-size-ocr", type=int, default=256, help="Hidden size to use for OCR.")
+        arg_parser.add_argument("--num-layers-ocr", type=int, default=2, help="Number of layers to use in OCR.")
 
         arg_parser.add_argument("--ratio", type=float, default=0.7, help="Ratio of letter to be detected on a slice.")
         arg_parser.add_argument(
