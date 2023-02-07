@@ -201,17 +201,14 @@ def evaluate_model(
     accuracy = accuracy_score(ground_truth, predictions)
     result = {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1_score}
 
-    if group != "":
-        result = {f"{group}/{k}": v for k, v in result.items()}
-
     if log:
         if no_average:
-            columns = ["class_name"] + [k for k, v in result.items() if not k.endswith("accuracy")]
+            columns = ["class_name"] + [k for k, v in result.items() if k != "accuracy"]
             data = []
             for i in range(num_classes):
                 data.append([i] + [round(result[column][i], 3) for column in columns[1:]])
             table = wandb.Table(data=data, columns=columns)
-            log_dict = {f"{group}/metrics": table, f"{group}/accuracy": result[f"{group}/accuracy"]}
+            log_dict = {f"{group}/metrics": table, f"{group}/accuracy": result["accuracy"]}
         else:
             log_dict = {f"{group}/{k}": v for k, v in result.items()}
         wandb.log(log_dict)
