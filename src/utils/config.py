@@ -28,9 +28,9 @@ class VTRConfig:
         arg_parser.add_argument(
             "--font", type=str, default="resources/fonts/NotoSans.ttf", help="Path to font that used for rendering."
         )
-        arg_parser.add_argument("--font-size", type=int, default=15, help="Font size to use for rendering.")
+        arg_parser.add_argument("--font-size", type=int, default=16, help="Font size to use for rendering.")
 
-        arg_parser.add_argument("--window-size", type=int, default=30, help="Window size to slice the image w/ text.")
+        arg_parser.add_argument("--window-size", type=int, default=32, help="Window size to slice the image w/ text.")
         arg_parser.add_argument("--stride", type=int, default=5, help="Window step size.")
 
         arg_parser.add_argument("--conv-kernel-size", type=int, default=3, help="Kernel size to use for convolutions.")
