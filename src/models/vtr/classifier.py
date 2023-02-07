@@ -32,7 +32,9 @@ class VisualToxicClassifier(nn.Module):
         self,
         height: int,
         width: int,
-        kernel_size: int = 3,
+        conv_kernel_size: int = 3,
+        pool_kernel_size: int = 2,
+        num_layers_conv: int = 3,
         max_position_embeddings: int = 512,
         hidden_size: int = 768,
         num_attention_heads: int = 12,
@@ -55,7 +57,9 @@ class VisualToxicClassifier(nn.Module):
         self.embedder = VisualEmbedder(
             height=height,
             width=width,
-            kernel_size=kernel_size,
+            conv_kernel_size=conv_kernel_size,
+            pool_kernel_size=pool_kernel_size,
+            num_layers=num_layers_conv,
             emb_size=hidden_size,
             out_channels=out_channels,
         )
@@ -74,7 +78,7 @@ class VisualToxicClassifier(nn.Module):
         self.classifier = nn.Linear(hidden_size, num_classes)
         self.num_classes = num_classes
         self.ocr = OCRHead(
-            input_size=out_channels * (height // 2**3),
+            input_size=out_channels * (height // pool_kernel_size**num_layers_conv),
             hidden_size=hidden_size_ocr,
             num_layers=num_layers_ocr,
             num_classes=num_classes_ocr,

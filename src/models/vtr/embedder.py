@@ -77,14 +77,15 @@ class ResBlock(nn.Module):
 def get_res_block_with_pooling(
     in_channels: int,
     out_channels: int,
-    kernel_size: int,
+    conv_kernel_size: int,
+    pool_kernel_size: int,
     padding: int | str = 0,
     stride: int = 1,
     dilation: int = 1,
 ):
     return nn.Sequential(
-        ResBlock(in_channels, out_channels, kernel_size, padding, stride, dilation),
-        nn.MaxPool2d(2),
+        ResBlock(in_channels, out_channels, conv_kernel_size, padding, stride, dilation),
+        nn.MaxPool2d(pool_kernel_size),
     )
 
 
@@ -93,28 +94,27 @@ class VisualEmbedder(nn.Module):
         self,
         height: int,
         width: int,
-        kernel_size: int = 3,
+        conv_kernel_size: int = 3,
+        pool_kernel_size: int = 2,
+        num_layers: int = 3,
         emb_size: int = 768,
         out_channels: int = 256,
-        out_channels_res_block_1=64,
-        out_channels_res_block_2=128,
     ):
         super().__init__()
-        logger.info(f"Initializing VisualEmbedder | kernel size: {kernel_size}, emb size: {emb_size}")
-
-        self.slice_conv = nn.Sequential(
-            get_res_block_with_pooling(1, out_channels_res_block_1, kernel_size, padding="same"),
-            get_res_block_with_pooling(
-                out_channels_res_block_1,
-                out_channels_res_block_2,
-                kernel_size,
-                padding="same",
-            ),
-            get_res_block_with_pooling(out_channels_res_block_2, out_channels, kernel_size, padding="same"),
+        logger.info(
+            f"Initializing VisualEmbedder | number of layers: {num_layers}, emb size: {emb_size}, "
+            f"convolutional kernel size: {conv_kernel_size}, pooling kernel size: {pool_kernel_size}"
         )
 
+        channels = [1, 64, 128, out_channels]
+        layers = [
+            get_res_block_with_pooling(*channels[i : i + 2], conv_kernel_size, pool_kernel_size, padding="same")
+            for i in range(num_layers)
+        ]
+        self.slice_conv = nn.Sequential(*layers)
+
         self.linear_bridge = nn.Linear(
-            (height // (2**3)) * (width // (2**3)) * out_channels,
+            (height // (pool_kernel_size**num_layers)) * (width // (pool_kernel_size**num_layers)) * out_channels,
             emb_size,
         )
 
