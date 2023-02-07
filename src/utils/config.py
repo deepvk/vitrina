@@ -38,6 +38,13 @@ class VTRConfig:
 
         arg_parser.add_argument("--hidden-size-ocr", type=int, default=256, help="Hidden size to use for OCR.")
         arg_parser.add_argument("--num-layers-ocr", type=int, default=2, help="Number of layers to use in OCR.")
+        
+        arg_parser.add_argument(
+            "--char2array",
+            type=str,
+            default=f"resources/char2array.pkl",
+            help="Path to char2array [only for VTR model].",
+        )
 
         arg_parser.add_argument("--ratio", type=float, default=0.7, help="Ratio of letter to be detected on a slice.")
         arg_parser.add_argument(
