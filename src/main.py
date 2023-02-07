@@ -92,14 +92,15 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     model_args = (
         vtr.font_size,
         vtr.window_size,
-        vtr.kernel_size,
+        vtr.conv_kernel_size,
+        vtr.pool_kernel_size,
         training_config.max_seq_len,
         model_config.emb_size,
         model_config.n_head,
         model_config.num_layers,
         model_config.num_classes,
         model_config.dropout,
-        vtr.out_channels,
+        (1, 64, 128, vtr.out_channels),
         not args.no_ocr,
     )
 
@@ -146,8 +147,8 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
     model = VisualTextSequenceLabeler(
         height=vtr.font_size,
         width=vtr.window_size,
-        kernel_size=vtr.kernel_size,
-        out_channels=vtr.out_channels,
+        kernel_size=vtr.conv_kernel_size,
+        channels=(1, 64, 128, vtr.out_channels),
         emb_size=model_config.emb_size,
         num_layers=model_config.num_layers,
         n_heads=model_config.n_head,

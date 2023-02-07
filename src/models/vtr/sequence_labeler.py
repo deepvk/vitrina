@@ -13,7 +13,7 @@ class VisualTextSequenceLabeler(nn.Module):
         kernel_size: int = 3,
         emb_size: int = 768,
         num_layers: int = 1,
-        out_channels: int = 32,
+        channels: tuple = (1, 64, 128, 256),
         n_heads: int = 12,
         dropout: float = 0,
     ):
@@ -25,7 +25,7 @@ class VisualTextSequenceLabeler(nn.Module):
             width=width,
             kernel_size=kernel_size,
             emb_size=emb_size,
-            out_channels=out_channels,
+            channels=channels,
         )
 
         encoder_layer = nn.TransformerEncoderLayer(

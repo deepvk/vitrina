@@ -8,7 +8,8 @@ class VTRConfig:
     font_size: int
     window_size: int
     stride: int
-    kernel_size: int
+    conv_kernel_size: int
+    pool_kernel_size: int
     out_channels: int
     hidden_size_ocr: int
     num_layers_ocr: int
@@ -26,12 +27,13 @@ class VTRConfig:
         arg_parser.add_argument(
             "--font", type=str, default="resources/fonts/NotoSans.ttf", help="Path to font that used for rendering."
         )
-        arg_parser.add_argument("--font-size", type=int, default=15, help="Font size to use for rendering.")
+        arg_parser.add_argument("--font-size", type=int, default=16, help="Font size to use for rendering.")
 
-        arg_parser.add_argument("--window-size", type=int, default=30, help="Window size to slice the image w/ text.")
+        arg_parser.add_argument("--window-size", type=int, default=32, help="Window size to slice the image w/ text.")
         arg_parser.add_argument("--stride", type=int, default=5, help="Window step size.")
 
-        arg_parser.add_argument("--kernel-size", type=int, default=3, help="Kernel size to use for convolutions.")
+        arg_parser.add_argument("--conv-kernel-size", type=int, default=3, help="Kernel size to use for convolutions.")
+        arg_parser.add_argument("--pool-kernel-size", type=int, default=2, help="Kernel size to use for pooling.")
         arg_parser.add_argument(
             "--out-channels", type=int, default=256, help="Number of output channels in the last convolutional layer."
         )
