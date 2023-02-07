@@ -34,7 +34,7 @@ def compute_ctc_loss(criterion: torch.nn.modules.loss.CTCLoss, logits: torch.Ten
     target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
 
     ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
-    ctc_loss /= input_lengths.shape[0]
+    ctc_loss /= len(texts)
 
     return ctc_loss
 
