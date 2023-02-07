@@ -19,7 +19,6 @@ from src.utils.config import TrainingConfig
 from src.utils.common import char2int
 from src.datasets.vtr_dataset import VTRDatasetOCR
 
-
 WANDB_PROJECT_NAME = "visual-text"
 
 
@@ -64,7 +63,6 @@ def train(
         num_workers=config.num_workers,
         shuffle=True,
     )
-
     val_dataloader = None
     if val_dataset is not None:
         logger.info(f"Create val dataloader")
@@ -144,15 +142,15 @@ def train(
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
-                evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
+                evaluate_model(model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average)
     pbar.close()
     logger.info("Training finished")
 
     if val_dataloader is not None:
-        evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
+        evaluate_model(model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average)
 
     if test_dataloader is not None:
-        evaluate_model(model, test_dataloader, device, sl, log=True, group="test")
+        evaluate_model(model, test_dataloader, device, sl, log=True, group="test", no_average=config.no_average)
 
     logger.info(f"Saving model")
     torch.save(model.state_dict(), join(wandb.run.dir, "last.ckpt"))
@@ -160,7 +158,14 @@ def train(
 
 @torch.no_grad()
 def evaluate_model(
-    model: nn.Module, dataloader: DataLoader, device: str, sl: bool, *, log: bool = True, group: str = ""
+    model: nn.Module,
+    dataloader: DataLoader,
+    device: str,
+    sl: bool,
+    *,
+    log: bool = True,
+    group: str = "",
+    no_average: bool = False,
 ) -> dict[str, float]:
     if log:
         logger.info(f"Evaluating the model on {group} set")
@@ -188,17 +193,26 @@ def evaluate_model(
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
 
-    average = "binary" if num_classes == 2 else "macro"
+    if no_average:
+        average = None
+    else:
+        average = "binary" if num_classes == 2 else "macro"
     precision, recall, f1_score, _ = precision_recall_fscore_support(ground_truth, predictions, average=average)
     accuracy = accuracy_score(ground_truth, predictions)
     result = {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1_score}
 
-    if group != "":
-        result = {f"{group}/{k}": v for k, v in result.items()}
-
     if log:
-        wandb.log(result)
-        log_string = ", ".join(f"{k}: {round(v, 3)}" for k, v in result.items())
-        logger.info(log_string)
+        if no_average:
+            columns = ["class_name"] + [k for k, v in result.items() if k != "accuracy"]
+            data = []
+            assert isinstance(num_classes, int)
+            for i in range(num_classes):
+                data.append([i] + [round(result[column][i], 3) for column in columns[1:]])
+            table = wandb.Table(data=data, columns=columns)
+            log_dict = {f"{group}/metrics": table, f"{group}/accuracy": result["accuracy"]}
+        else:
+            log_dict = {f"{group}/{k}": v for k, v in result.items()}
+        wandb.log(log_dict)
+    logger.info(",\n ".join(f"{k}: {v}" for k, v in result.items() if isinstance(v, float)))
 
     return result

@@ -38,7 +38,6 @@ class VTRConfig:
 
         arg_parser.add_argument("--hidden-size-ocr", type=int, default=256, help="Hidden size to use for OCR.")
         arg_parser.add_argument("--num-layers-ocr", type=int, default=2, help="Number of layers to use in OCR.")
-
         arg_parser.add_argument("--ratio", type=float, default=0.7, help="Ratio of letter to be detected on a slice.")
         arg_parser.add_argument(
             "--max-slices-count-per-word", type=int, default=9, help="Maximum number of slices per word."
@@ -86,6 +85,8 @@ class TrainingConfig:
     log_every: int = 1000
     num_workers: int = 1
 
+    no_average: bool = False
+
     @classmethod
     def from_arguments(cls, args: Namespace) -> "TrainingConfig":
         config_fields = [it.name for it in fields(cls)]
@@ -107,4 +108,7 @@ class TrainingConfig:
         arg_parser.add_argument("--random-state", type=int, default=21, help="Random state.")
         arg_parser.add_argument("--log-every", type=int, default=1000, help="Log every N steps.")
         arg_parser.add_argument("--num-workers", type=int, default=1, help="Number of workers for data loaders.")
+        arg_parser.add_argument(
+            "--no-average", action="store_true", help="Do not use averaging for evaluation metrics."
+        )
         return arg_parser
