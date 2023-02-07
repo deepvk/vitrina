@@ -10,7 +10,6 @@ class VTRConfig:
     stride: int
     conv_kernel_size: int
     pool_kernel_size: int
-    num_layers_conv: int
     out_channels: int
     hidden_size_ocr: int
     num_layers_ocr: int
@@ -35,7 +34,6 @@ class VTRConfig:
 
         arg_parser.add_argument("--conv-kernel-size", type=int, default=3, help="Kernel size to use for convolutions.")
         arg_parser.add_argument("--pool-kernel-size", type=int, default=2, help="Kernel size to use for pooling.")
-        arg_parser.add_argument("--num-layers-conv", type=int, default=3, help="Number of convolutional layers.")
         arg_parser.add_argument(
             "--out-channels", type=int, default=256, help="Number of output channels in the last convolutional layer."
         )

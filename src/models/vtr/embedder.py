@@ -96,25 +96,25 @@ class VisualEmbedder(nn.Module):
         width: int,
         conv_kernel_size: int = 3,
         pool_kernel_size: int = 2,
-        num_layers: int = 3,
         emb_size: int = 768,
-        out_channels: int = 256,
+        channels: tuple = (1, 64, 128, 256),
     ):
         super().__init__()
         logger.info(
-            f"Initializing VisualEmbedder | number of layers: {num_layers}, emb size: {emb_size}, "
+            f"Initializing VisualEmbedder | number of layers: {len(channels)-1}, emb size: {emb_size}, "
             f"convolutional kernel size: {conv_kernel_size}, pooling kernel size: {pool_kernel_size}"
         )
 
-        channels = (1, 64, 128, out_channels)
         layers = [
             get_res_block_with_pooling(channels[i], channels[i + 1], conv_kernel_size, pool_kernel_size, padding="same")
-            for i in range(num_layers)
+            for i in range(len(channels) - 1)
         ]
         self.slice_conv = nn.Sequential(*layers)
 
         self.linear_bridge = nn.Linear(
-            (height // (pool_kernel_size**num_layers)) * (width // (pool_kernel_size**num_layers)) * out_channels,
+            (height // (pool_kernel_size ** (len(channels) - 1)))
+            * (width // (pool_kernel_size ** (len(channels) - 1)))
+            * channels[-1],
             emb_size,
         )
 
@@ -141,7 +141,11 @@ class VisualEmbedderSL(VisualEmbedder):
     ):
         logger.info(f"Initializing VisualEmbedderSL")
         super().__init__(
-            height, width, kernel_size, emb_size, out_channels, out_channels_res_block_1, out_channels_res_block_2
+            height=height,
+            width=width,
+            conv_kernel_size=kernel_size,
+            emb_size=emb_size,
+            channels=(1, out_channels, out_channels_res_block_1, out_channels_res_block_2),
         )
 
     def forward(self, batch: dict[str, torch.Tensor]):
