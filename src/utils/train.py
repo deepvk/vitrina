@@ -205,6 +205,7 @@ def evaluate_model(
         if no_average:
             columns = ["class_name"] + [k for k, v in result.items() if k != "accuracy"]
             data = []
+            assert isinstance(num_classes, int)
             for i in range(num_classes):
                 data.append([i] + [round(result[column][i], 3) for column in columns[1:]])
             table = wandb.Table(data=data, columns=columns)
