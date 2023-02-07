@@ -19,7 +19,6 @@ from src.utils.config import TrainingConfig
 from src.utils.common import char2int
 from src.datasets.vtr_dataset import VTRDatasetOCR
 
-
 WANDB_PROJECT_NAME = "visual-text"
 
 
@@ -205,21 +204,17 @@ def evaluate_model(
     if group != "":
         result = {f"{group}/{k}": v for k, v in result.items()}
 
-    if no_average:
-        columns = ["class_name"] + [k for k, v in result.items() if not k.endswith("accuracy")]
-        data = []
-        for i in range(num_classes):
-            data.append([i] + [round(result[column][i], 3) for column in columns[1:]])
-        table = wandb.Table(data=data, columns=columns)
-        log_string = ",\n ".join(f"{k}: {v}" for k, v in result.items())
-    else:
-        log_string = ", ".join(f"{k}: {round(v, 3)}" for k, v in result.items())
-
     if log:
         if no_average:
-            wandb.log({f"{group} evaluation": table})
+            columns = ["class_name"] + [k for k, v in result.items() if not k.endswith("accuracy")]
+            data = []
+            for i in range(num_classes):
+                data.append([i] + [round(result[column][i], 3) for column in columns[1:]])
+            table = wandb.Table(data=data, columns=columns)
+            log_dict = {f"{group}/metrics": table, f"{group}/accuracy": result[f"{group}/accuracy"]}
         else:
-            wandb.log(result)
-    logger.info(log_string)
+            log_dict = {f"{group}/{k}": v for k, v in result.items()}
+        wandb.log(log_dict)
+    logger.info(",\n ".join(f"{k}: {v}" for k, v in result.items() if isinstance(v, float)))
 
     return result
