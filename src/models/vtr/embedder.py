@@ -135,18 +135,10 @@ class VisualEmbedderSL(VisualEmbedder):
         width: int,
         kernel_size: int = 3,
         emb_size: int = 768,
-        out_channels: int = 256,
-        out_channels_res_block_1=64,
-        out_channels_res_block_2=128,
+        channels: tuple = (1, 64, 128, 256),
     ):
         logger.info(f"Initializing VisualEmbedderSL")
-        super().__init__(
-            height=height,
-            width=width,
-            conv_kernel_size=kernel_size,
-            emb_size=emb_size,
-            channels=(1, out_channels, out_channels_res_block_1, out_channels_res_block_2),
-        )
+        super().__init__(height=height, width=width, conv_kernel_size=kernel_size, emb_size=emb_size, channels=channels)
 
     def forward(self, batch: dict[str, torch.Tensor]):
         slices = batch["slices"]
