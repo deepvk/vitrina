@@ -111,7 +111,6 @@ class VisualEmbedder(nn.Module):
             get_res_block_with_pooling(channels[i], channels[i + 1], conv_kernel_size, pool_kernel_size, padding="same")
             for i in range(num_layers)
         ]
-        print(layers)
         self.slice_conv = nn.Sequential(*layers)
 
         self.linear_bridge = nn.Linear(
