@@ -143,12 +143,12 @@ def train(
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
-                evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
+                evaluate_model(model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average)
     pbar.close()
     logger.info("Training finished")
 
     if val_dataloader is not None:
-        evaluate_model(model, val_dataloader, device, sl, log=True, group="val")
+        evaluate_model(model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average)
 
     if test_dataloader is not None:
         evaluate_model(model, test_dataloader, device, sl, log=True, group="test", no_average=config.no_average)
@@ -206,12 +206,20 @@ def evaluate_model(
         result = {f"{group}/{k}": v for k, v in result.items()}
 
     if no_average:
+        columns = ["class_name"] + [k for k, v in result.items() if not k.endswith("accuracy")]
+        data = []
+        for i in range(num_classes):
+            data.append([i] + [round(result[column][i], 3) for column in columns[1:]])
+        table = wandb.Table(data=data, columns=columns)
         log_string = ",\n ".join(f"{k}: {v}" for k, v in result.items())
     else:
         log_string = ", ".join(f"{k}: {round(v, 3)}" for k, v in result.items())
 
     if log:
-        wandb.log(result)
-        logger.info(log_string)
+        if no_average:
+            wandb.log({f"{group} evaluation": table})
+        else:
+            wandb.log(result)
+    logger.info(log_string)
 
     return result
