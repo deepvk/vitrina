@@ -16,6 +16,8 @@ from src.utils.common import load_json, BceLossForTokenClassification
 from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig
 from src.utils.train import train
 
+import pickle
+
 
 def configure_arg_parser() -> ArgumentParser:
     arg_parser = ArgumentParser()
