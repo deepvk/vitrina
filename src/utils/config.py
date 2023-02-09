@@ -38,7 +38,7 @@ class VTRConfig:
         arg_parser.add_argument(
             "--out-channels", type=int, default=256, help="Number of output channels in the last convolutional layer."
         )
-        
+
         arg_parser.add_argument(
             "--char2array",
             type=str,
