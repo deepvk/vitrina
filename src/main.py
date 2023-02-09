@@ -160,7 +160,9 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
     )
     criterion = BceLossForTokenClassification()
 
-    dataset_args = (vtr.font, vtr.font_size, vtr.window_size, vtr.stride, training_config.max_seq_len)
+    char2array = pickle.load(open(vtr.char2array, "rb"))
+
+    dataset_args = (char2array, vtr.window_size, vtr.stride, training_config.max_seq_len)
     train_dataset = VTRDatasetSL(train_data, *dataset_args)
     val_dataset = VTRDatasetSL(val_data, *dataset_args) if val_data else None
     test_dataset = VTRDatasetSL(test_data, *dataset_args) if test_data else None
