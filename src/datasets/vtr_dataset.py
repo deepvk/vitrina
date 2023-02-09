@@ -62,8 +62,7 @@ class VTRDatasetOCR(Dataset):
     def __init__(
         self,
         labeled_texts: list[DatasetSample],
-        font: str,
-        font_size: int = 15,
+        char2array: dict,
         window_size: int = 30,
         stride: int = 5,
         max_seq_len: int = 512,
@@ -84,9 +83,7 @@ class VTRDatasetOCR(Dataset):
 
         self.max_seq_len = max_seq_len
 
-        self.slicer = VTRSlicerWithText(
-            font=font, font_size=font_size, window_size=window_size, stride=stride, ratio=ratio
-        )
+        self.slicer = VTRSlicerWithText(char2array=char2array, window_size=window_size, stride=stride, ratio=ratio)
 
     def __len__(self) -> int:
         return len(self.texts)
