@@ -14,6 +14,7 @@ class VTRConfig:
     hidden_size_ocr: int
     num_layers_ocr: int
     ratio: float
+    char2array: str
     max_slices_count_per_word: int = None
 
     @classmethod
@@ -36,6 +37,13 @@ class VTRConfig:
         arg_parser.add_argument("--pool-kernel-size", type=int, default=2, help="Kernel size to use for pooling.")
         arg_parser.add_argument(
             "--out-channels", type=int, default=256, help="Number of output channels in the last convolutional layer."
+        )
+        
+        arg_parser.add_argument(
+            "--char2array",
+            type=str,
+            default="resources/char2array.pkl",
+            help="Path to char2array [only for VTR model].",
         )
 
         arg_parser.add_argument("--hidden-size-ocr", type=int, default=256, help="Hidden size to use for OCR.")
