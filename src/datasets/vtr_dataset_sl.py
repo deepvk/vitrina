@@ -14,8 +14,7 @@ class VTRDatasetSL(Dataset):
     def __init__(
         self,
         labeled_texts: list[SLDatasetSample],
-        font: str,
-        font_size: int = 15,
+        char2array: dict,
         window_size: int = 30,
         stride: int = 5,
         max_seq_len: int = 512,
@@ -25,10 +24,10 @@ class VTRDatasetSL(Dataset):
         self.labeled_texts = labeled_texts
         self.max_seq_len = max_seq_len
 
-        self.slicer = VTRSlicer(font=font, font_size=font_size, window_size=window_size, stride=stride)
+        self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
 
         self.max_slices_count_per_word = max_slices_count_per_word
-        self.font_size = font_size
+        self.font_size = char2array["UNK"].shape[0]
         self.window_size = window_size
 
     def __len__(self) -> int:
