@@ -52,8 +52,6 @@ def build_char2array(
     not_supported = []
     problem_chars = []
     for char in tqdm(all_chars):
-        if char in char2array.keys():
-            continue
         current_font = pick_font(char, fonts)
 
         if current_font:
