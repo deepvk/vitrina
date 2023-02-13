@@ -75,7 +75,6 @@ def build_char2array(
                     problem_chars.append(char)
                 else:
                     not_supported.remove(char)
-                    print(fixed_char)
 
     not_supported += problem_chars
     if not width_unknown:
