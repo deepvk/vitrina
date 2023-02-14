@@ -9,21 +9,17 @@ from src.utils.common import text2image
 class VTRSlicerWithText:
     def __init__(
         self,
-        window_size: int = 25,
-        stride: int = 10,
-        font: str = "fonts/NotoSans.ttf",
-        font_size: int = 15,
+        char2array: dict,
+        window_size: int = 32,
+        stride: int = 5,
         ratio: float = 0.7,
     ):
-        logger.info(
-            f"Init VTRSlicerWithText | window_size={window_size}, stride={stride}, "
-            f"font={font}, font_size={font_size}, ratio={ratio}"
-        )
+        logger.info(f"Init VTRSlicerWithText | window_size={window_size}, stride={stride}, ratio={ratio}")
         self.window_size = window_size
         self.stride = stride
-        self.font = font
-        self.font_size = font_size
         self.ratio = ratio
+        self.char2array = char2array
+        self.unknown_token = char2array["UNK"]
 
     def __call__(self, text: str, max_slice_count: int = None) -> tuple[torch.Tensor, list[str]]:
         image = []
@@ -35,8 +31,8 @@ class VTRSlicerWithText:
             text = " "
 
         for i in range(len(text)):
-            char_img = text2image(text[i], font=self.font, font_size=self.font_size)
-            width = char_img.size[0]
+            char_img = self.char2array.get(text[i], self.unknown_token)
+            width = char_img.shape[1]
             char_num += [i] * width
             char_ratio_l = np.concatenate((char_ratio_l, np.arange(1, 0, -1 / width)))
             char_ratio_r = np.concatenate((char_ratio_r, np.arange(1 / width, 1 + 1 / width, 1 / width)))
@@ -50,8 +46,7 @@ class VTRSlicerWithText:
             + self.window_size
         )
 
-        image_bytes = F.pad(image_bytes, (0, padded_image_width - image_width), "constant", 255)
-        image_bytes = 255 - image_bytes
+        image_bytes = F.pad(image_bytes, (0, padded_image_width - image_width), "constant", 0)
         slices = image_bytes.unfold(1, self.window_size, self.stride).permute((1, 0, 2))[:max_slice_count]
 
         lb = 0
@@ -75,20 +70,20 @@ class VTRSlicerWithText:
 class VTRSlicer:
     def __init__(
         self,
-        window_size: int = 25,
-        stride: int = 10,
-        font: str = "fonts/NotoSans.ttf",
-        font_size: int = 15,
+        char2array: dict,
+        window_size: int = 32,
+        stride: int = 5,
     ):
-        logger.info(f"Init VTRSlicer | window_size={window_size}, stride={stride}, font={font}, font_size={font_size}")
+        logger.info(f"Init VTRSlicer | window_size={window_size}")
         self.window_size = window_size
         self.stride = stride
-        self.font = font
-        self.font_size = font_size
+        self.char2array = char2array
+        self.unknown_token = char2array["UNK"]
 
     def __call__(self, text: str, max_slice_count: int = None) -> torch.Tensor:
-        image = text2image(text, font=self.font, font_size=self.font_size)
-        image_bytes = torch.as_tensor(np.array(image))
+        image_bytes = torch.tensor(
+            np.concatenate([self.char2array.get(char, self.unknown_token) for char in text], axis=1)
+        )
 
         image_width = image_bytes.shape[1]
         padded_image_width = int(
@@ -96,8 +91,7 @@ class VTRSlicer:
             + self.window_size
         )
 
-        image_bytes = F.pad(image_bytes, (0, padded_image_width - image_width), "constant", 255)
-        image_bytes = 255 - image_bytes
+        image_bytes = F.pad(image_bytes, (0, padded_image_width - image_width), "constant", 0)
         slices = image_bytes.unfold(1, self.window_size, self.stride).permute((1, 0, 2))[:max_slice_count]
 
         return slices
