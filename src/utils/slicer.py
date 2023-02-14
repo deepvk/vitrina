@@ -19,6 +19,7 @@ class VTRSlicerWithText:
         self.stride = stride
         self.ratio = ratio
         self.char2array = char2array
+        self.unknown_token = char2array["UNK"]
 
     def __call__(self, text: str, max_slice_count: int = None) -> tuple[torch.Tensor, list[str]]:
         image = []
@@ -29,10 +30,8 @@ class VTRSlicerWithText:
         if len(text) == 0:
             text = " "
 
-        unknown_token = self.char2array["UNK"]
-
         for i in range(len(text)):
-            char_img = self.char2array.get(text[i], unknown_token)
+            char_img = self.char2array.get(text[i], self.unknown_token)
             width = char_img.shape[1]
             char_num += [i] * width
             char_ratio_l = np.concatenate((char_ratio_l, np.arange(1, 0, -1 / width)))
@@ -79,10 +78,10 @@ class VTRSlicer:
         self.window_size = window_size
         self.stride = stride
         self.char2array = char2array
+        self.unknown_token = char2array["UNK"]
 
     def __call__(self, text: str, max_slice_count: int = None) -> torch.Tensor:
-        unknown_token = self.char2array["UNK"]
-        image_bytes = torch.Tensor(np.concatenate([self.char2array.get(char, unknown_token) for char in text], axis=1))
+        image_bytes = torch.tensor(np.concatenate([self.char2array.get(char, self.unknown_token) for char in text], axis=1))
 
         image_width = image_bytes.shape[1]
         padded_image_width = int(
