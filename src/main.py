@@ -1,3 +1,4 @@
+import pickle
 from argparse import ArgumentParser, Namespace
 
 from loguru import logger
@@ -15,8 +16,6 @@ from src.models.vtr.sequence_labeler import VisualTextSequenceLabeler
 from src.utils.common import load_json, BceLossForTokenClassification
 from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig
 from src.utils.train import train
-
-import pickle
 
 
 def configure_arg_parser() -> ArgumentParser:
@@ -106,7 +105,8 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         not args.no_ocr,
     )
 
-    char2array = pickle.load(open(vtr.char2array, "rb"))
+    with open("char2array.pkl", "rb") as f:
+        char2array = pickle.load(f)
 
     dataset_args = (char2array, vtr.window_size, vtr.stride, training_config.max_seq_len)
     if args.no_ocr:
@@ -160,7 +160,8 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
     )
     criterion = BceLossForTokenClassification()
 
-    char2array = pickle.load(open(vtr.char2array, "rb"))
+    with open("char2array.pkl", "rb") as f:
+        char2array = pickle.load(f)
 
     dataset_args = (char2array, vtr.window_size, vtr.stride, training_config.max_seq_len)
     train_dataset = VTRDatasetSL(train_data, *dataset_args)
