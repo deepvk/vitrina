@@ -31,6 +31,13 @@ def configure_arg_parser() -> ArgumentParser:
     arg_parser.add_argument("--vtr", action="store_true", help="Use Visual Token Representations.")
     arg_parser.add_argument("--sl", action="store_true", help="Use Sequence Labeling task.")
 
+    arg_parser.add_argument(
+        "--char2array",
+        type=str,
+        default="resources/char2array.pkl",
+        help="Path to char2array [only for VTR model].",
+    )
+
     arg_parser.add_argument("--no-ocr", action="store_true", help="Do not use OCR with visual models.")
 
     arg_parser = VTRConfig.add_to_arg_parser(arg_parser)
@@ -105,7 +112,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         not args.no_ocr,
     )
 
-    with open("char2array.pkl", "rb") as f:
+    with open(args.char2array, "rb") as f:
         char2array = pickle.load(f)
 
     dataset_args = (char2array, vtr.window_size, vtr.stride, training_config.max_seq_len)
@@ -160,7 +167,7 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
     )
     criterion = BceLossForTokenClassification()
 
-    with open("char2array.pkl", "rb") as f:
+    with open(args.char2array, "rb") as f:
         char2array = pickle.load(f)
 
     dataset_args = (char2array, vtr.window_size, vtr.stride, training_config.max_seq_len)
