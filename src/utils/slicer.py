@@ -81,7 +81,9 @@ class VTRSlicer:
         self.unknown_token = char2array["UNK"]
 
     def __call__(self, text: str, max_slice_count: int = None) -> torch.Tensor:
-        image_bytes = torch.tensor(np.concatenate([self.char2array.get(char, self.unknown_token) for char in text], axis=1))
+        image_bytes = torch.tensor(
+            np.concatenate([self.char2array.get(char, self.unknown_token) for char in text], axis=1)
+        )
 
         image_width = image_bytes.shape[1]
         padded_image_width = int(
