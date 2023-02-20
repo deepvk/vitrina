@@ -36,22 +36,26 @@ class VTRDataset(Dataset):
         max_seq_len: int = 512,
     ):
         logger.info(f"Initializing VTRDataset with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
-        self.labeled_texts = labeled_texts
+        self.texts = []
+        self.labels = []
+        for sample in tqdm(labeled_texts):
+            cleaned_text = clean_text(sample["text"])
+            if cleaned_text:
+                self.texts.append(cleaned_text)
+                self.labels.append(sample["label"])
+        logger.info(f"Got {len(self.texts)} clean samples out of {len(labeled_texts)}")
         self.max_seq_len = max_seq_len
 
         self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
 
     def __len__(self) -> int:
-        return len(self.labeled_texts)
+        return len(self.texts)
 
     def __getitem__(self, index) -> tuple[torch.Tensor, int]:
-        sample = self.labeled_texts[index]
-        raw_text = clean_text(sample["text"])
-
         # [n slices; font size; window size]
-        slices = self.slicer(raw_text)
+        slices = self.slicer(self.texts[index])
         slices = slices[: self.max_seq_len]
-        return slices, sample["label"]
+        return slices, self.labels[index]
 
     def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
         slices, labels = [list(item) for item in zip(*batch)]
