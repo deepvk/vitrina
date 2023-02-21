@@ -35,10 +35,8 @@ class TokensToxicClassifier(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
-        bert_output = self.model(
+        return self.model(
             input_ids=batch["input_ids"],
             attention_mask=batch["attention_mask"],
             token_type_ids=batch["token_type_ids"],
         )
-
-        return bert_output["logits"]
