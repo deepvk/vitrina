@@ -34,7 +34,7 @@ class TokensToxicClassifier(nn.Module):
         self.model = BertForSequenceClassification(model_config)
         self.num_classes = num_classes
 
-    def forward(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
+    def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         return self.model(
             input_ids=batch["input_ids"],
             attention_mask=batch["attention_mask"],
