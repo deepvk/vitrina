@@ -9,13 +9,16 @@ from src.datasets.bert_dataset import BERTDataset
 from src.datasets.bert_dataset_sl import BERTDatasetSL
 from src.datasets.vtr_dataset import VTRDataset, VTRDatasetOCR
 from src.datasets.vtr_dataset_sl import VTRDatasetSL
-from src.models.ttr.classifier import TokensToxicClassifier
 from src.models.ttr.sequence_labeler import TextTokensSequenceLabeler
-from src.models.vtr.classifier import VisualToxicClassifier
 from src.models.vtr.sequence_labeler import VisualTextSequenceLabeler
 from src.utils.common import load_json, BceLossForTokenClassification
 from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig
 from src.utils.train import train
+from src.models.embedders.vtr import VisualEmbedder
+from src.models.embedders.ttr import VanillaEmbedder
+from src.models.backbone import get_model
+from src.models.vtr.ocr import OCRHead
+from src.models.tasks import ToxicClassifier
 
 
 def configure_arg_parser() -> ArgumentParser:
@@ -55,14 +58,19 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
     val_dataset = BERTDataset(val_data, args.tokenizer, training_config.max_seq_len) if val_data else None
     test_dataset = BERTDataset(test_data, args.tokenizer, training_config.max_seq_len) if test_data else None
 
-    model = TokensToxicClassifier(
+    task_model = get_model(
+        vtr=args.vtr,
         vocab_size=train_dataset.tokenizer.vocab_size,
-        num_layers=model_config.num_layers,
+        max_position_embeddings=training_config.max_seq_len,
         hidden_size=model_config.emb_size,
-        num_classes=model_config.num_classes,
         num_attention_heads=model_config.n_head,
+        num_hidden_layers=model_config.num_layers,
+        num_classes=model_config.num_classes,
         dropout=model_config.dropout,
     )
+    embedder = VanillaEmbedder()
+
+    model = ToxicClassifier(task_model, embedder)
     criterion = CrossEntropyLoss()
 
     train(
@@ -96,21 +104,23 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
     vtr = VTRConfig.from_arguments(args)
+    channels = (1, 64, 128, vtr.out_channels)
 
-    model_args = (
-        vtr.font_size,
-        vtr.window_size,
-        vtr.conv_kernel_size,
-        vtr.pool_kernel_size,
-        training_config.max_seq_len,
-        model_config.emb_size,
-        model_config.n_head,
-        model_config.num_layers,
-        model_config.num_classes,
-        model_config.dropout,
-        (1, 64, 128, vtr.out_channels),
-        not args.no_ocr,
+    task_model = get_model(vtr=args.vtr, hidden_size=model_config.emb_size, num_classes=model_config.num_classes)
+    embedder = VisualEmbedder(
+        height=vtr.font_size,
+        width=vtr.window_size,
+        conv_kernel_size=vtr.conv_kernel_size,
+        pool_kernel_size=vtr.pool_kernel_size,
+        emb_size=model_config.emb_size,
+        channels=channels,
+        max_position_embeddings=training_config.max_seq_len,
+        hidden_size=model_config.emb_size,
+        dropout=model_config.dropout,
+        num_attention_heads=model_config.n_head,
+        num_layers=model_config.num_layers,
     )
+    model_args = (task_model, embedder, args.vtr)
 
     with open(args.char2array, "rb") as f:
         char2array = pickle.load(f)
@@ -121,19 +131,25 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
         test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
 
-        model = VisualToxicClassifier(*model_args)
+        model = ToxicClassifier(*model_args)
 
     else:
         train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
         val_dataset = VTRDatasetOCR(val_data, ratio=vtr.ratio, *dataset_args) if val_data else None
         test_dataset = VTRDatasetOCR(test_data, ratio=vtr.ratio, *dataset_args) if test_data else None
 
-        model = VisualToxicClassifier(
-            hidden_size_ocr=vtr.hidden_size_ocr,
-            num_layers_ocr=vtr.num_layers_ocr,
-            num_classes_ocr=len(train_dataset.char_set),
-            *model_args,
+        logger.info(
+            f"OCR parameters: hidden size: {vtr.hidden_size_ocr}, # layers: {vtr.num_layers_ocr}, "
+            f"# classes: {len(train_dataset.char_set)}"
         )
+        ocr = OCRHead(
+            input_size=vtr.out_channels * (vtr.font_size // vtr.pool_kernel_size ** (len(channels) - 1)),
+            hidden_size=vtr.hidden_size_ocr,
+            num_layers=vtr.num_layers_ocr,
+            num_classes=len(train_dataset.char_set),
+        )
+
+        model = ToxicClassifier(ocr=ocr, *model_args)
 
     criterion = CrossEntropyLoss()
 
