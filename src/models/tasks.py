@@ -1,6 +1,7 @@
-from typing import Type
+from transformers import BertConfig, BertForSequenceClassification
 import torch
 from torch import nn
+from loguru import logger
 
 from src.models.vtr.ocr import OCRHead
 from src.utils.common import PositionalEncoding
@@ -10,8 +11,12 @@ class SequenceClassifier(nn.Module):
     def __init__(self, config, embedder, ocr: OCRHead = None):
         super().__init__()
 
-        self.vtr_flag = vtr
-        self.classifier = classifier
+        logger.info(
+            f"Initializing vanilla BERT classifier | hidden size: {config['hidden_size']}, "
+            f"# layers: {config['num_hidden_layers']}")
+
+        model_config = BertConfig(**config)
+        self.backbone = BertForSequenceClassification(model_config)
         self.embedder = embedder
         self.ocr = ocr
         self.positional = PositionalEncoding(
@@ -27,7 +32,7 @@ class SequenceClassifier(nn.Module):
         if self.ocr:
             result["ocr_logits"] = self.ocr(output["ocr_embeddings"])
 
-        logits = self.classifier(*output["embeddings"])  # batch_size, num_classes
+        logits = self.backbone(inputs_embeds=output["embeddings"])  # batch_size, num_classes
         result["logits"] = logits
 
         return result
