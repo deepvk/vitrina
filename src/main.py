@@ -58,7 +58,6 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
     test_dataset = BERTDataset(test_data, args.tokenizer, training_config.max_seq_len) if test_data else None
 
     backbone_config = {
-        "vocab_size": train_dataset.tokenizer.vocab_size,
         "hidden_size": model_config.emb_size,
         "num_hidden_layers": model_config.num_layers,
         "num_attention_heads": model_config.n_head,
@@ -66,7 +65,6 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
         "attention_probs_dropout_prob": model_config.dropout,
         "max_position_embeddings": training_config.max_seq_len,
         "num_classes": model_config.num_classes,
-        # type_vocab_size - ?
     }
 
     embedder = TTREmbedder(train_dataset.tokenizer.vocab_size, model_config.emb_size)
@@ -108,7 +106,6 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     channels = (1, 64, 128, vtr.out_channels)
 
     backbone_config = {
-        # "vocab_size": ,
         "hidden_size": model_config.emb_size,
         "num_hidden_layers": model_config.num_layers,
         "num_attention_heads": model_config.n_head,
@@ -116,7 +113,6 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         "attention_probs_dropout_prob": model_config.dropout,
         "max_position_embeddings": training_config.max_seq_len,
         "num_classes": model_config.num_classes,
-        # type_vocab_size - ?
     }
 
     embedder = VTREmbedder(
