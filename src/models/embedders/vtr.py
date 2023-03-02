@@ -2,8 +2,6 @@ from loguru import logger
 from torch import nn
 from torch.nn.functional import relu
 
-from src.utils.common import PositionalEncoding
-
 
 def get_conv_bn(
     in_channels: int,
@@ -99,11 +97,6 @@ class VTREmbedder(nn.Module):
         pool_kernel_size: int = 2,
         emb_size: int = 768,
         channels: tuple = (1, 64, 128, 256),
-        max_position_embeddings: int = 512,
-        hidden_size: int = 768,
-        dropout: float = 0.0,
-        num_attention_heads: int = 12,
-        num_layers: int = 1,
     ):
         super().__init__()
         logger.info(
@@ -124,18 +117,6 @@ class VTREmbedder(nn.Module):
             emb_size,
         )
 
-        self.positional = PositionalEncoding(hidden_size, dropout, max_len=max_position_embeddings)
-
-        encoder_layer = nn.TransformerEncoderLayer(
-            d_model=hidden_size,
-            dim_feedforward=hidden_size * 4,
-            nhead=num_attention_heads,
-            dropout=dropout,
-            batch_first=True,
-        )
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-        self.norm = nn.LayerNorm(hidden_size)
-
     def forward(self, batch):
         batch_size, slice_count, height, width = batch["slices"].shape
         conv = self.slice_conv(batch["slices"].view(batch_size * slice_count, 1, height, width))
@@ -144,16 +125,7 @@ class VTREmbedder(nn.Module):
         batched_conv = conv.view(batch_size, slice_count, channels_count * h_out * w_out)
         batched_conv = self.linear_bridge(batched_conv)
 
-        # If a BoolTensor is provided, the positions with the value of True will be ignored
-        # while the position with the value of False will be unchanged.
-        attn_mask = ~(batch["attention_mask"].bool())
-        encoder_output = self.encoder(
-            src=self.positional(batched_conv), src_key_padding_mask=attn_mask
-        )  # batch_size, seq_len, emb_size
-        encoder_output = encoder_output.mean(dim=1)  # batch_size, emb_size
-        encoder_output = self.norm(encoder_output)  # batch_size, emb_size
-
-        output = {"embeddings": [encoder_output], "ocr_embeddings": conv}
+        output = {"embeddings": batched_conv, "ocr_embeddings": conv}
 
         return output  # [batch size, slice count, emb size],
         # [batch size * slice count, out channels, emb height, emb width]
