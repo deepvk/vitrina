@@ -14,11 +14,10 @@ from src.models.vtr.sequence_labeler import VisualTextSequenceLabeler
 from src.utils.common import load_json, BceLossForTokenClassification
 from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig
 from src.utils.train import train
-from src.models.embedders.vtr import VisualEmbedder
-from src.models.embedders.ttr import VanillaEmbedder
-from src.models.backbone import get_model
+from src.models.embedders.vtr import VTREmbedder
+from src.models.embedders.ttr import TTREmbedder
 from src.models.vtr.ocr import OCRHead
-from src.models.tasks import ToxicClassifier
+from src.models.tasks import SequenceClassifier
 
 
 def configure_arg_parser() -> ArgumentParser:
@@ -114,13 +113,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         pool_kernel_size=vtr.pool_kernel_size,
         emb_size=model_config.emb_size,
         channels=channels,
-        max_position_embeddings=training_config.max_seq_len,
-        hidden_size=model_config.emb_size,
-        dropout=model_config.dropout,
-        num_attention_heads=model_config.n_head,
-        num_layers=model_config.num_layers,
     )
-    model_args = (task_model, embedder, args.vtr)
 
     with open(args.char2array, "rb") as f:
         char2array = pickle.load(f)

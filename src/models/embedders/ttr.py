@@ -1,8 +1,8 @@
 from torch import nn
 
 
-class VanillaEmbedder(nn.Module):
-    def __init__(self):
+class TTREmbedder(nn.Module):
+    def __init__(self, num_embeddings, emb_size):
         super().__init__()
 
     def forward(self, batch):

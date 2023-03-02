@@ -90,7 +90,7 @@ def get_res_block_with_pooling(
     )
 
 
-class VisualEmbedder(nn.Module):
+class VTREmbedder(nn.Module):
     def __init__(
         self,
         height: int,

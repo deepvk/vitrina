@@ -5,14 +5,8 @@ from torch import nn
 from src.models.vtr.ocr import OCRHead
 
 
-class ToxicClassifier(nn.Module):
-    def __init__(
-        self,
-        classifier,
-        embedder,
-        vtr: bool = False,
-        ocr: OCRHead = None,
-    ):
+class SequenceClassifier(nn.Module):
+    def __init__(self, config, embedder, ocr: OCRHead = None):
         super().__init__()
 
         self.vtr_flag = vtr
