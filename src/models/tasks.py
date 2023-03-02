@@ -13,16 +13,15 @@ class SequenceClassifier(nn.Module):
 
         logger.info(
             f"Initializing vanilla BERT classifier | hidden size: {config['hidden_size']}, "
-            f"# layers: {config['num_hidden_layers']}")
+            f"# layers: {config['num_hidden_layers']}"
+        )
 
         model_config = BertConfig(**config)
         self.backbone = BertForSequenceClassification(model_config)
         self.embedder = embedder
         self.ocr = ocr
         self.positional = PositionalEncoding(
-            config["hidden_size"],
-            config["hidden_dropout_prob"],
-            config["max_position_embeddings"]
+            config["hidden_size"], config["hidden_dropout_prob"], config["max_position_embeddings"]
         )
 
     def forward(self, input_batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:

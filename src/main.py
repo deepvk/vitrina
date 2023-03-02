@@ -108,7 +108,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     channels = (1, 64, 128, vtr.out_channels)
 
     backbone_config = {
-        #"vocab_size": ,
+        # "vocab_size": ,
         "hidden_size": model_config.emb_size,
         "num_hidden_layers": model_config.num_layers,
         "num_attention_heads": model_config.n_head,
