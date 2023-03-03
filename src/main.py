@@ -60,9 +60,7 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
 
     model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
 
-    train(
-        model, train_dataset, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
-    )
+    train(model, train_dataset, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset)
 
 
 def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
@@ -128,7 +126,9 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             num_classes=len(train_dataset.char_set),
         )
 
-        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, train_dataset.char_set, ocr, vtr.alpha)
+        model = SequenceClassifier(
+            model_config, embedder, training_config.max_seq_len, train_dataset.char_set, ocr, vtr.alpha
+        )
 
     train(
         model,
