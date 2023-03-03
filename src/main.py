@@ -57,19 +57,9 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
     val_dataset = BERTDataset(val_data, args.tokenizer, training_config.max_seq_len) if val_data else None
     test_dataset = BERTDataset(test_data, args.tokenizer, training_config.max_seq_len) if test_data else None
 
-    backbone_config = {
-        "hidden_size": model_config.emb_size,
-        "num_hidden_layers": model_config.num_layers,
-        "num_attention_heads": model_config.n_head,
-        "hidden_dropout_prob": model_config.dropout,
-        "attention_probs_dropout_prob": model_config.dropout,
-        "max_position_embeddings": training_config.max_seq_len,
-        "num_classes": model_config.num_classes,
-    }
-
     embedder = TTREmbedder(train_dataset.tokenizer.vocab_size, model_config.emb_size)
 
-    model = SequenceClassifier(backbone_config, embedder)
+    model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
     criterion = CrossEntropyLoss()
 
     train(
@@ -105,16 +95,6 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     vtr = VTRConfig.from_arguments(args)
     channels = (1, 64, 128, vtr.out_channels)
 
-    backbone_config = {
-        "hidden_size": model_config.emb_size,
-        "num_hidden_layers": model_config.num_layers,
-        "num_attention_heads": model_config.n_head,
-        "hidden_dropout_prob": model_config.dropout,
-        "attention_probs_dropout_prob": model_config.dropout,
-        "max_position_embeddings": training_config.max_seq_len,
-        "num_classes": model_config.num_classes,
-    }
-
     embedder = VTREmbedder(
         height=vtr.font_size,
         width=vtr.window_size,
@@ -133,7 +113,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
         test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
 
-        model = SequenceClassifier(backbone_config, embedder)
+        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
 
     else:
         train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
@@ -151,7 +131,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             num_classes=len(train_dataset.char_set),
         )
 
-        model = SequenceClassifier(backbone_config, embedder, ocr)
+        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, ocr)
 
     criterion = CrossEntropyLoss()
 

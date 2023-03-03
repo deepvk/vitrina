@@ -8,21 +8,25 @@ from src.utils.common import PositionalEncoding
 
 
 class SequenceClassifier(nn.Module):
-    def __init__(self, config, embedder, ocr: OCRHead = None):
+    def __init__(self, config, embedder, max_position_embeddings, ocr: OCRHead = None):
         super().__init__()
 
         logger.info(
-            f"Initializing vanilla BERT classifier | hidden size: {config['hidden_size']}, "
-            f"# layers: {config['num_hidden_layers']}"
+            f"Initializing vanilla BERT classifier | hidden size: {config.emb_size}, " f"# layers: {config.num_layers}"
         )
 
-        model_config = BertConfig(**config)
+        model_config = BertConfig(
+            hidden_size=config.emb_size,
+            num_hidden_layers=config.num_layers,
+            num_attention_heads=config.n_head,
+            hidden_dropout_prob=config.dropout,
+            attention_probs_dropout_prob=config.dropout,
+            num_classes=config.num_classes,
+        )
         self.backbone = BertForSequenceClassification(model_config)
         self.embedder = embedder
         self.ocr = ocr
-        self.positional = PositionalEncoding(
-            config["hidden_size"], config["hidden_dropout_prob"], config["max_position_embeddings"]
-        )
+        self.positional = PositionalEncoding(config.emb_size, config.dropout, max_position_embeddings)
 
     def forward(self, input_batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         result = {}
