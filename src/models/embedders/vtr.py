@@ -125,7 +125,7 @@ class VTREmbedder(nn.Module):
         batched_conv = conv.view(batch_size, slice_count, channels_count * h_out * w_out)
         batched_conv = self.linear_bridge(batched_conv)
 
-        output = {"embeddings": batched_conv, "ocr_embeddings": conv}
-
-        return output  # [batch size, slice count, emb size],
-        # [batch size * slice count, out channels, emb height, emb width]
+        return {
+            "embeddings": batched_conv,  # [batch size, slice count, emb size],
+            "ocr_embeddings": conv,  # [batch size * slice count, out channels, emb height, emb width]
+        }
