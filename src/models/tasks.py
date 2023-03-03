@@ -56,6 +56,7 @@ class SequenceClassifier(nn.Module):
         self.positional = PositionalEncoding(config.emb_size, config.dropout, max_position_embeddings)
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
         self.alpha = alpha
+        self.num_classes = config.num_classes
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]) -> dict[str, torch.Tensor]:
 
