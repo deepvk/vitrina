@@ -2,7 +2,6 @@ import pickle
 from argparse import ArgumentParser, Namespace
 
 from loguru import logger
-from torch.nn import CrossEntropyLoss
 from torch.utils.data import Dataset
 
 from src.datasets.bert_dataset import BERTDataset
@@ -11,7 +10,7 @@ from src.datasets.vtr_dataset import VTRDataset, VTRDatasetOCR
 from src.datasets.vtr_dataset_sl import VTRDatasetSL
 from src.models.ttr.sequence_labeler import TextTokensSequenceLabeler
 from src.models.vtr.sequence_labeler import VisualTextSequenceLabeler
-from src.utils.common import load_json, BceLossForTokenClassification
+from src.utils.common import load_json
 from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig
 from src.utils.train import train
 from src.models.embedders.vtr import VTREmbedder
@@ -60,10 +59,9 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
     embedder = TTREmbedder(train_dataset.tokenizer.vocab_size, model_config.emb_size)
 
     model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
-    criterion = CrossEntropyLoss()
 
     train(
-        model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
+        model, train_dataset, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
     )
 
 
@@ -83,9 +81,8 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
-    criterion = BceLossForTokenClassification()
 
-    train(model, train_dataset, criterion, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
+    train(model, train_dataset, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
 
 
 def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
@@ -131,14 +128,11 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             num_classes=len(train_dataset.char_set),
         )
 
-        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, ocr)
-
-    criterion = CrossEntropyLoss()
+        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, train_dataset.char_set, ocr, vtr.alpha)
 
     train(
         model,
         train_dataset,
-        criterion,
         training_config,
         sl=False,
         val_dataset=val_dataset,
@@ -163,7 +157,6 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
         n_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
-    criterion = BceLossForTokenClassification()
 
     with open(args.char2array, "rb") as f:
         char2array = pickle.load(f)
@@ -173,7 +166,7 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
     val_dataset = VTRDatasetSL(val_data, *dataset_args) if val_data else None
     test_dataset = VTRDatasetSL(test_data, *dataset_args) if test_data else None
 
-    train(model, train_dataset, criterion, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
+    train(model, train_dataset, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
 
 
 def main(args: Namespace):
