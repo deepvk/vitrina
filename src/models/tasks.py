@@ -5,6 +5,7 @@ from loguru import logger
 
 from src.models.vtr.ocr import OCRHead
 from src.utils.common import PositionalEncoding
+from src.models.embedders.vtr import VTREmbedder
 
 
 class SequenceClassifier(nn.Module):
@@ -35,6 +36,7 @@ class SequenceClassifier(nn.Module):
         result = self.backbone(inputs_embeds=output["embeddings"])  # batch_size, num_classes
 
         if self.ocr:
+            assert isinstance(self.embedder, VTREmbedder)
             result["ocr_logits"] = self.ocr(output["ocr_embeddings"])
 
         return result
