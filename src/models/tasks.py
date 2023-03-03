@@ -29,13 +29,12 @@ class SequenceClassifier(nn.Module):
         self.positional = PositionalEncoding(config.emb_size, config.dropout, max_position_embeddings)
 
     def forward(self, input_batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        result = {}
+
         output = self.embedder(input_batch)  # batch_size, seq_len, emb_size
         output["embeddings"] = self.positional(output["embeddings"])
+        result = self.backbone(inputs_embeds=output["embeddings"])  # batch_size, num_classes
+
         if self.ocr:
             result["ocr_logits"] = self.ocr(output["ocr_embeddings"])
-
-        logits = self.backbone(inputs_embeds=output["embeddings"])  # batch_size, num_classes
-        result["logits"] = logits
 
         return result
