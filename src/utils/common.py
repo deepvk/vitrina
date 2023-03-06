@@ -12,6 +12,10 @@ import ujson
 from PIL import ImageFont, Image, ImageDraw
 from loguru import logger
 from torch import nn
+from torch.nn.utils.rnn import pad_sequence
+
+from src.models.vtr.ocr import OCRHead
+
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -118,6 +122,25 @@ def char2int(text: list, char_set: set):
 
     targets = torch.LongTensor([char2int_dict[c] for c in text])
     return targets
+
+
+def compute_ctc_loss(
+    criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char_set: set
+):
+    logits = ocr(embeddings)
+    log_probs = torch.nn.functional.log_softmax(logits, dim=2)
+    input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
+
+    chars = list("".join(np.concatenate(texts).flatten()))
+    targets = char2int(chars, char_set)
+
+    get_len = np.vectorize(len)
+    target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
+
+    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
+    ctc_loss /= len(texts)
+
+    return ctc_loss
 
 
 class BceLossForTokenClassification(nn.Module):

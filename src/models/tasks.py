@@ -2,33 +2,11 @@ from transformers import BertConfig, BertForSequenceClassification
 import torch
 from torch import nn
 from loguru import logger
-import numpy as np
-from torch.nn.utils.rnn import pad_sequence
 from torch.nn import CTCLoss
 
 from src.models.vtr.ocr import OCRHead
-from src.utils.common import PositionalEncoding
+from src.utils.common import PositionalEncoding, compute_ctc_loss
 from src.models.embedders.vtr import VTREmbedder
-from src.utils.common import char2int
-
-
-def compute_ctc_loss(
-    criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char_set: set
-):
-    logits = ocr(embeddings)
-    log_probs = torch.nn.functional.log_softmax(logits, dim=2)
-    input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
-
-    chars = list("".join(np.concatenate(texts).flatten()))
-    targets = char2int(chars, char_set)
-
-    get_len = np.vectorize(len)
-    target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
-
-    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
-    ctc_loss /= len(texts)
-
-    return ctc_loss
 
 
 class SequenceClassifier(nn.Module):
