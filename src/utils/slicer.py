@@ -64,11 +64,6 @@ class VTRSlicerWithText:
             r_shift = 1 if char_ratio_r[rb] >= self.ratio else 0
             slice_text.append(text[char_num[lb] + l_shift : char_num[rb] + r_shift])
 
-        with open("slice_text.txt", "w", encoding="utf-8") as file:
-            for txt in slice_text:
-                file.write(txt + "\n")
-        torch.save(slices, "slices.pt")
-
         return slices, slice_text
 
 
