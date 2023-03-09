@@ -3,8 +3,6 @@ import torch
 import torch.nn.functional as F
 from loguru import logger
 
-from src.utils.common import text2image
-
 
 class VTRSlicerWithText:
     def __init__(
@@ -33,6 +31,8 @@ class VTRSlicerWithText:
         for i in range(len(text)):
             char_img = self.char2array.get(text[i], self.unknown_token)
             width = char_img.shape[1]
+            if width == 0:
+                continue
             char_num += [i] * width
             char_ratio_l = np.concatenate((char_ratio_l, np.arange(1, 0, -1 / width)))
             char_ratio_r = np.concatenate((char_ratio_r, np.arange(1 / width, 1 + 1 / width, 1 / width)))
@@ -63,6 +63,11 @@ class VTRSlicerWithText:
             l_shift = 0 if char_ratio_l[lb] >= self.ratio else 1
             r_shift = 1 if char_ratio_r[rb] >= self.ratio else 0
             slice_text.append(text[char_num[lb] + l_shift : char_num[rb] + r_shift])
+
+        with open("slice_text.txt", "w", encoding="utf-8") as file:
+            for txt in slice_text:
+                file.write(txt + "\n")
+        torch.save(slices, "slices.pt")
 
         return slices, slice_text
 
