@@ -36,7 +36,7 @@ class SequenceClassifier(nn.Module):
         self.alpha = alpha
         self.num_classes = config.num_classes
 
-    def forward(self, input_batch: dict[str, list | torch.Tensor]) -> dict[str, torch.Tensor]:
+    def forward(self, input_batch: dict[str, list | torch.Tensor], validation: bool = False) -> dict[str, torch.Tensor]:
 
         output = self.embedder(input_batch)  # batch_size, seq_len, emb_size
         output["embeddings"] = self.positional(output["embeddings"])
@@ -45,7 +45,7 @@ class SequenceClassifier(nn.Module):
             inputs_embeds=output["embeddings"], labels=input_batch["labels"].to(torch.int64)
         )  # batch_size, num_classes
 
-        if self.ocr:
+        if self.ocr and not validation:
             assert isinstance(self.embedder, VTREmbedder)
             result["ce_loss"] = result["loss"]
             assert isinstance(input_batch["texts"], list)

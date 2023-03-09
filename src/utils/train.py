@@ -148,7 +148,7 @@ def evaluate_model(
     predictions = []
     for test_batch in tqdm(dataloader, leave=False, position=0):
         batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
-        output = model(batch)["logits"]
+        output = model(batch, validation=True)["logits"]
 
         true_labels = test_batch["labels"]
 
