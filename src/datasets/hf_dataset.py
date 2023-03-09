@@ -13,8 +13,8 @@ class DatasetNLLB(IterableDataset):
         self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
         self.max_seq_len = max_seq_len
         self.pairs = get_dataset_config_names("allenai/nllb")
-        self.lang2label = {}
-        self.label2lang = {}
+        self.lang2label: dict[str, int] = {}
+        self.label2lang: dict[int, str] = {}
         label = 0
         for pair in tqdm(self.pairs):
             for lang in pair.split("-"):
