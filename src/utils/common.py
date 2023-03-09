@@ -117,22 +117,15 @@ def _set_seed(seed: int):
         torch.cuda.manual_seed_all(seed)
 
 
-def char2int(text: list, char_set: set):
-    char2int_dict = {char: i + 1 for i, char in enumerate(char_set)}
-
-    targets = torch.LongTensor([char2int_dict[c] for c in text])
-    return targets
-
-
 def compute_ctc_loss(
-    criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char_set: set
+    criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char2int_dict: dict
 ):
     logits = ocr(embeddings)
     log_probs = torch.nn.functional.log_softmax(logits, dim=2)
     input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
 
     chars = list("".join(np.concatenate(texts).flatten()))
-    targets = char2int(chars, char_set)
+    targets = torch.LongTensor([char2int_dict[c] for c in chars])
 
     get_len = np.vectorize(len)
     target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)

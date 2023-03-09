@@ -11,7 +11,13 @@ from src.models.embedders.vtr import VTREmbedder
 
 class SequenceClassifier(nn.Module):
     def __init__(
-        self, config, embedder, max_position_embeddings, char_set: set = None, ocr: OCRHead = None, alpha: float = 1
+        self,
+        config,
+        embedder,
+        max_position_embeddings,
+        char2int_dict: dict = None,
+        ocr: OCRHead = None,
+        alpha: float = 1,
     ):
         super().__init__()
 
@@ -30,13 +36,13 @@ class SequenceClassifier(nn.Module):
         self.backbone = BertForSequenceClassification(model_config)
         self.embedder = embedder
         self.ocr = ocr
-        self.char_set = char_set
+        self.char2int_dict = char2int_dict
         self.positional = PositionalEncoding(config.emb_size, config.dropout, max_position_embeddings)
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
         self.alpha = alpha
         self.num_classes = config.num_classes
 
-    def forward(self, input_batch: dict[str, list | torch.Tensor], validation: bool = False) -> dict[str, torch.Tensor]:
+    def forward(self, input_batch: dict[str, list | torch.Tensor]) -> dict[str, torch.Tensor]:
 
         output = self.embedder(input_batch)  # batch_size, seq_len, emb_size
         output["embeddings"] = self.positional(output["embeddings"])
@@ -45,12 +51,12 @@ class SequenceClassifier(nn.Module):
             inputs_embeds=output["embeddings"], labels=input_batch["labels"].to(torch.int64)
         )  # batch_size, num_classes
 
-        if self.ocr and not validation:
+        if self.ocr:
             assert isinstance(self.embedder, VTREmbedder)
             result["ce_loss"] = result["loss"]
             assert isinstance(input_batch["texts"], list)
             result["ctc_loss"] = compute_ctc_loss(
-                self.ctc_criterion, self.ocr, output["ocr_embeddings"], input_batch["texts"], self.char_set
+                self.ctc_criterion, self.ocr, output["ocr_embeddings"], input_batch["texts"], self.char2int_dict
             )
             result["loss"] = result["ce_loss"] + self.alpha * result["ctc_loss"]
 

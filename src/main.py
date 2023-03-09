@@ -115,20 +115,20 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         val_dataset = VTRDatasetOCR(val_data, ratio=vtr.ratio, *dataset_args) if val_data else None
         test_dataset = VTRDatasetOCR(test_data, ratio=vtr.ratio, *dataset_args) if test_data else None
 
+        char2int_dict = {char: i + 1 for i, char in enumerate(char2array.keys())}
+
         logger.info(
             f"OCR parameters: hidden size: {vtr.hidden_size_ocr}, # layers: {vtr.num_layers_ocr}, "
-            f"# classes: {len(train_dataset.char_set)}"
+            f"# classes: {len(char2array.keys())}"
         )
         ocr = OCRHead(
             input_size=vtr.out_channels * (vtr.font_size // vtr.pool_kernel_size ** (len(channels) - 1)),
             hidden_size=vtr.hidden_size_ocr,
             num_layers=vtr.num_layers_ocr,
-            num_classes=len(train_dataset.char_set),
+            num_classes=len(char2array.keys()),
         )
 
-        model = SequenceClassifier(
-            model_config, embedder, training_config.max_seq_len, train_dataset.char_set, ocr, vtr.alpha
-        )
+        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, char2int_dict, ocr, vtr.alpha)
 
     train(
         model,
