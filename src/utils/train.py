@@ -114,15 +114,28 @@ def train(
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
-                evaluate_model(model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average)
+                evaluate_model(
+                    model,
+                    val_dataloader,
+                    device,
+                    sl,
+                    log=True,
+                    group="val",
+                    no_average=config.no_average,
+                    ocr_flag=ocr_flag,
+                )
     pbar.close()
     logger.info("Training finished")
 
     if val_dataloader is not None:
-        evaluate_model(model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average)
+        evaluate_model(
+            model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average, ocr_flag=ocr_flag
+        )
 
     if test_dataloader is not None:
-        evaluate_model(model, test_dataloader, device, sl, log=True, group="test", no_average=config.no_average)
+        evaluate_model(
+            model, test_dataloader, device, sl, log=True, group="test", no_average=config.no_average, ocr_flag=ocr_flag
+        )
 
     logger.info(f"Saving model")
     torch.save(model.state_dict(), join(wandb.run.dir, "last.ckpt"))
@@ -138,6 +151,7 @@ def evaluate_model(
     log: bool = True,
     group: str = "",
     no_average: bool = False,
+    ocr_flag: bool = False,
 ) -> dict[str, float]:
     if log:
         logger.info(f"Evaluating the model on {group} set")
@@ -146,9 +160,17 @@ def evaluate_model(
     num_classes = model.num_classes
     ground_truth = []
     predictions = []
+    loss = 0
+    ce_loss = 0
+    ctc_loss = 0
     for test_batch in tqdm(dataloader, leave=False, position=0):
         batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
-        output = model(batch)["logits"]
+        output = model(batch)
+
+        loss += output["loss"]
+        if ocr_flag:
+            ce_loss += output["ce_loss"]
+            ctc_loss += output["ctc_loss"]
 
         true_labels = test_batch["labels"]
 
@@ -157,10 +179,15 @@ def evaluate_model(
             mask = true_labels >= 0
 
             true_labels = true_labels[mask]
-            output = output.view(-1)[mask]
+            output["logits"] = output["logits"].view(-1)[mask]
 
-        predictions.append(torch.argmax(output, dim=1).cpu().detach())
+        predictions.append(torch.argmax(output["logits"], dim=1).cpu().detach())
         ground_truth.append(true_labels.cpu().detach())
+
+    losses_dict = {f"{group}/loss": loss / len(dataloader)}
+    if ocr_flag:
+        losses_dict[f"{group}/ce_loss"] = ce_loss / len(dataloader)
+        losses_dict[f"{group}/ctc_loss"] = ctc_loss / len(dataloader)
 
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
@@ -184,6 +211,7 @@ def evaluate_model(
             log_dict = {f"{group}/metrics": table, f"{group}/accuracy": result["accuracy"]}
         else:
             log_dict = {f"{group}/{k}": v for k, v in result.items()}
+        log_dict.update(losses_dict)
         wandb.log(log_dict)
     logger.info(",\n ".join(f"{k}: {v}" for k, v in result.items() if isinstance(v, float)))
 
