@@ -3,8 +3,6 @@ import torch
 import torch.nn.functional as F
 from loguru import logger
 
-from src.utils.common import text2image
-
 
 class VTRSlicerWithText:
     def __init__(
@@ -33,6 +31,10 @@ class VTRSlicerWithText:
         for i in range(len(text)):
             char_img = self.char2array.get(text[i], self.unknown_token)
             width = char_img.shape[1]
+            if width == 0:
+                # emojis consist of 2 symbols - one for color and one for shape
+                # we skip the color one as we do not need it
+                continue
             char_num += [i] * width
             char_ratio_l = np.concatenate((char_ratio_l, np.arange(1, 0, -1 / width)))
             char_ratio_r = np.concatenate((char_ratio_r, np.arange(1 / width, 1 + 1 / width, 1 / width)))

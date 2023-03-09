@@ -14,6 +14,7 @@ class VTRConfig:
     hidden_size_ocr: int
     num_layers_ocr: int
     ratio: float
+    alpha: float
     max_slices_count_per_word: int = None
 
     @classmethod
@@ -40,6 +41,7 @@ class VTRConfig:
         arg_parser.add_argument("--hidden-size-ocr", type=int, default=256, help="Hidden size to use for OCR.")
         arg_parser.add_argument("--num-layers-ocr", type=int, default=2, help="Number of layers to use in OCR.")
         arg_parser.add_argument("--ratio", type=float, default=0.7, help="Ratio of letter to be detected on a slice.")
+        arg_parser.add_argument("--alpha", type=float, default=1, help="Coefficient for losses summation")
         arg_parser.add_argument(
             "--max-slices-count-per-word", type=int, default=9, help="Maximum number of slices per word."
         )

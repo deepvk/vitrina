@@ -10,38 +10,17 @@ from torch.optim import AdamW
 from torch.utils.data import Dataset, DataLoader
 from tqdm.auto import tqdm
 from transformers import get_linear_schedule_with_warmup
-from torch.nn import CTCLoss
-import numpy as np
-from torch.nn.utils.rnn import pad_sequence
 
 from src.utils.common import set_deterministic_mode, dict_to_device
 from src.utils.config import TrainingConfig
-from src.utils.common import char2int
 from src.datasets.vtr_dataset import VTRDatasetOCR
 
 WANDB_PROJECT_NAME = "visual-text"
 
 
-def compute_ctc_loss(criterion: torch.nn.modules.loss.CTCLoss, logits: torch.Tensor, texts: list, char_set: set):
-    log_probs = torch.nn.functional.log_softmax(logits, dim=2)
-    input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
-
-    chars = list("".join(np.concatenate(texts).flatten()))
-    targets = char2int(chars, char_set)
-
-    get_len = np.vectorize(len)
-    target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
-
-    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
-    ctc_loss /= len(texts)
-
-    return ctc_loss
-
-
 def train(
     model: nn.Module,
     train_dataset: Dataset,
-    criterion: nn.Module,
     config: TrainingConfig,
     *,
     sl: bool,
@@ -89,8 +68,6 @@ def train(
     logger.info(f"Parameters count: {parameters_count}")
     model.to(device)
 
-    ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
-
     logger.info(f"Using AdamW optimizer | lr: {config.lr}")
     optimizer = AdamW(model.parameters(), config.lr, betas=(config.beta1, config.beta2))
     num_training_steps = len(train_dataloader) * config.epochs
@@ -100,7 +77,7 @@ def train(
     logger.info(f"Use linear scheduler for {num_training_steps} training steps, {config.warmup} warmup steps")
 
     wandb.init(project=WANDB_PROJECT_NAME, config=asdict(config))
-    wandb.watch(model, criterion, log="gradients", log_freq=50, idx=None, log_graph=False)
+    wandb.watch(model, log="gradients", log_freq=50, idx=None, log_graph=False)
 
     logger.info(f"Start training for {config.epochs} epochs")
     pbar = tqdm(total=num_training_steps)
@@ -116,18 +93,13 @@ def train(
             optimizer.zero_grad()
 
             model_output = model(batch)
-            loss = criterion(model_output["logits"], batch["labels"].to(torch.int64))
+            loss = model_output["loss"]
 
             if ocr_flag:
                 assert isinstance(train_dataset, VTRDatasetOCR)
-                ctc_loss = compute_ctc_loss(
-                    ctc_criterion, model_output["ocr_logits"], batch["texts"], train_dataset.char_set
-                )
 
-                log_dict["train/ctc_loss"] = ctc_loss
-                log_dict["train/bce_loss"] = loss
-
-                loss = loss + 1 * ctc_loss
+                log_dict["train/ctc_loss"] = model_output["ctc_loss"]
+                log_dict["train/ce_loss"] = model_output["ce_loss"]
 
             loss.backward()
             optimizer.step()
@@ -142,15 +114,28 @@ def train(
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
-                evaluate_model(model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average)
+                evaluate_model(
+                    model,
+                    val_dataloader,
+                    device,
+                    sl,
+                    log=True,
+                    group="val",
+                    no_average=config.no_average,
+                    ocr_flag=ocr_flag,
+                )
     pbar.close()
     logger.info("Training finished")
 
     if val_dataloader is not None:
-        evaluate_model(model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average)
+        evaluate_model(
+            model, val_dataloader, device, sl, log=True, group="val", no_average=config.no_average, ocr_flag=ocr_flag
+        )
 
     if test_dataloader is not None:
-        evaluate_model(model, test_dataloader, device, sl, log=True, group="test", no_average=config.no_average)
+        evaluate_model(
+            model, test_dataloader, device, sl, log=True, group="test", no_average=config.no_average, ocr_flag=ocr_flag
+        )
 
     logger.info(f"Saving model")
     torch.save(model.state_dict(), join(wandb.run.dir, "last.ckpt"))
@@ -166,6 +151,7 @@ def evaluate_model(
     log: bool = True,
     group: str = "",
     no_average: bool = False,
+    ocr_flag: bool = False,
 ) -> dict[str, float]:
     if log:
         logger.info(f"Evaluating the model on {group} set")
@@ -174,9 +160,17 @@ def evaluate_model(
     num_classes = model.num_classes
     ground_truth = []
     predictions = []
+    loss = 0
+    ce_loss = 0
+    ctc_loss = 0
     for test_batch in tqdm(dataloader, leave=False, position=0):
         batch = dict_to_device(test_batch, except_keys={"max_word_len", "texts"}, device=device)
-        output = model(batch)["logits"]
+        output = model(batch)
+
+        loss += output["loss"]
+        if ocr_flag:
+            ce_loss += output["ce_loss"]
+            ctc_loss += output["ctc_loss"]
 
         true_labels = test_batch["labels"]
 
@@ -185,10 +179,15 @@ def evaluate_model(
             mask = true_labels >= 0
 
             true_labels = true_labels[mask]
-            output = output.view(-1)[mask]
+            output["logits"] = output["logits"].view(-1)[mask]
 
-        predictions.append(torch.argmax(output, dim=1).cpu().detach())
+        predictions.append(torch.argmax(output["logits"], dim=1).cpu().detach())
         ground_truth.append(true_labels.cpu().detach())
+
+    losses_dict = {f"{group}/loss": loss / len(dataloader)}
+    if ocr_flag:
+        losses_dict[f"{group}/ce_loss"] = ce_loss / len(dataloader)
+        losses_dict[f"{group}/ctc_loss"] = ctc_loss / len(dataloader)
 
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
@@ -212,6 +211,7 @@ def evaluate_model(
             log_dict = {f"{group}/metrics": table, f"{group}/accuracy": result["accuracy"]}
         else:
             log_dict = {f"{group}/{k}": v for k, v in result.items()}
+        log_dict.update(losses_dict)
         wandb.log(log_dict)
     logger.info(",\n ".join(f"{k}: {v}" for k, v in result.items() if isinstance(v, float)))
 

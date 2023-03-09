@@ -12,6 +12,10 @@ import ujson
 from PIL import ImageFont, Image, ImageDraw
 from loguru import logger
 from torch import nn
+from torch.nn.utils.rnn import pad_sequence
+
+from src.models.vtr.ocr import OCRHead
+
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -113,11 +117,23 @@ def _set_seed(seed: int):
         torch.cuda.manual_seed_all(seed)
 
 
-def char2int(text: list, char_set: set):
-    char2int_dict = {char: i + 1 for i, char in enumerate(char_set)}
+def compute_ctc_loss(
+    criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char2int_dict: dict
+):
+    logits = ocr(embeddings)
+    log_probs = torch.nn.functional.log_softmax(logits, dim=2)
+    input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
 
-    targets = torch.LongTensor([char2int_dict[c] for c in text])
-    return targets
+    chars = list("".join(np.concatenate(texts).flatten()))
+    targets = torch.LongTensor([char2int_dict[c] for c in chars])
+
+    get_len = np.vectorize(len)
+    target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
+
+    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
+    ctc_loss /= len(texts)
+
+    return ctc_loss
 
 
 class BceLossForTokenClassification(nn.Module):
@@ -132,3 +148,24 @@ class BceLossForTokenClassification(nn.Module):
         num_tokens = int(torch.sum(mask))
         loss = self.bce_loss(outputs, labels) * mask
         return torch.sum(loss) / num_tokens
+
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, hidden_size: int, dropout=0.1, max_len=512):
+        super(PositionalEncoding, self).__init__()
+
+        self.dropout = nn.Dropout(p=dropout)
+
+        self.pe = nn.Parameter(torch.zeros(1, max_len, hidden_size))
+        # position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        # div_term = torch.pow(
+        #     1e4, -torch.arange(0, hidden_size, 2).float() / hidden_size
+        # )
+        # pe = torch.zeros(max_len, 1, hidden_size)
+        # pe[:,0,0::2] = torch.sin(position * div_term)
+        # pe[:,0,1::2] = torch.cos(position * div_term)
+        # self.register_buffer("pe", pe)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x + self.pe[:, : x.size(1), :]
+        return self.dropout(x)

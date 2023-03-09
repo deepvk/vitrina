@@ -2,20 +2,21 @@ import pickle
 from argparse import ArgumentParser, Namespace
 
 from loguru import logger
-from torch.nn import CrossEntropyLoss
 from torch.utils.data import Dataset
 
 from src.datasets.bert_dataset import BERTDataset
 from src.datasets.bert_dataset_sl import BERTDatasetSL
 from src.datasets.vtr_dataset import VTRDataset, VTRDatasetOCR
 from src.datasets.vtr_dataset_sl import VTRDatasetSL
-from src.models.ttr.classifier import TokensToxicClassifier
 from src.models.ttr.sequence_labeler import TextTokensSequenceLabeler
-from src.models.vtr.classifier import VisualToxicClassifier
 from src.models.vtr.sequence_labeler import VisualTextSequenceLabeler
-from src.utils.common import load_json, BceLossForTokenClassification
+from src.utils.common import load_json
 from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig
 from src.utils.train import train
+from src.models.embedders.vtr import VTREmbedder
+from src.models.embedders.ttr import TTREmbedder
+from src.models.vtr.ocr import OCRHead
+from src.models.tasks import SequenceClassifier
 
 
 def configure_arg_parser() -> ArgumentParser:
@@ -55,19 +56,11 @@ def train_vanilla_encoder(args: Namespace, train_data: list, val_data: list = No
     val_dataset = BERTDataset(val_data, args.tokenizer, training_config.max_seq_len) if val_data else None
     test_dataset = BERTDataset(test_data, args.tokenizer, training_config.max_seq_len) if test_data else None
 
-    model = TokensToxicClassifier(
-        vocab_size=train_dataset.tokenizer.vocab_size,
-        num_layers=model_config.num_layers,
-        hidden_size=model_config.emb_size,
-        num_classes=model_config.num_classes,
-        num_attention_heads=model_config.n_head,
-        dropout=model_config.dropout,
-    )
-    criterion = CrossEntropyLoss()
+    embedder = TTREmbedder(train_dataset.tokenizer.vocab_size, model_config.emb_size)
 
-    train(
-        model, train_dataset, criterion, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset
-    )
+    model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
+
+    train(model, train_dataset, training_config, sl=False, val_dataset=val_dataset, test_dataset=test_dataset)
 
 
 def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
@@ -86,9 +79,8 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
         num_attention_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
-    criterion = BceLossForTokenClassification()
 
-    train(model, train_dataset, criterion, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
+    train(model, train_dataset, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
 
 
 def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
@@ -96,20 +88,15 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
     vtr = VTRConfig.from_arguments(args)
+    channels = (1, 64, 128, vtr.out_channels)
 
-    model_args = (
-        vtr.font_size,
-        vtr.window_size,
-        vtr.conv_kernel_size,
-        vtr.pool_kernel_size,
-        training_config.max_seq_len,
-        model_config.emb_size,
-        model_config.n_head,
-        model_config.num_layers,
-        model_config.num_classes,
-        model_config.dropout,
-        (1, 64, 128, vtr.out_channels),
-        not args.no_ocr,
+    embedder = VTREmbedder(
+        height=vtr.font_size,
+        width=vtr.window_size,
+        conv_kernel_size=vtr.conv_kernel_size,
+        pool_kernel_size=vtr.pool_kernel_size,
+        emb_size=model_config.emb_size,
+        channels=channels,
     )
 
     with open(args.char2array, "rb") as f:
@@ -121,26 +108,31 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
         test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
 
-        model = VisualToxicClassifier(*model_args)
+        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
 
     else:
         train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
         val_dataset = VTRDatasetOCR(val_data, ratio=vtr.ratio, *dataset_args) if val_data else None
         test_dataset = VTRDatasetOCR(test_data, ratio=vtr.ratio, *dataset_args) if test_data else None
 
-        model = VisualToxicClassifier(
-            hidden_size_ocr=vtr.hidden_size_ocr,
-            num_layers_ocr=vtr.num_layers_ocr,
-            num_classes_ocr=len(train_dataset.char_set),
-            *model_args,
+        char2int_dict = {char: i + 1 for i, char in enumerate(char2array.keys())}
+
+        logger.info(
+            f"OCR parameters: hidden size: {vtr.hidden_size_ocr}, # layers: {vtr.num_layers_ocr}, "
+            f"# classes: {len(char2array.keys())}"
+        )
+        ocr = OCRHead(
+            input_size=vtr.out_channels * (vtr.font_size // vtr.pool_kernel_size ** (len(channels) - 1)),
+            hidden_size=vtr.hidden_size_ocr,
+            num_layers=vtr.num_layers_ocr,
+            num_classes=len(char2array.keys()),
         )
 
-    criterion = CrossEntropyLoss()
+        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, char2int_dict, ocr, vtr.alpha)
 
     train(
         model,
         train_dataset,
-        criterion,
         training_config,
         sl=False,
         val_dataset=val_dataset,
@@ -165,7 +157,6 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
         n_heads=model_config.n_head,
         dropout=model_config.dropout,
     )
-    criterion = BceLossForTokenClassification()
 
     with open(args.char2array, "rb") as f:
         char2array = pickle.load(f)
@@ -175,7 +166,7 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
     val_dataset = VTRDatasetSL(val_data, *dataset_args) if val_data else None
     test_dataset = VTRDatasetSL(test_data, *dataset_args) if test_data else None
 
-    train(model, train_dataset, criterion, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
+    train(model, train_dataset, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
 
 
 def main(args: Namespace):
