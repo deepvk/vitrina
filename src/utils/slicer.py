@@ -32,6 +32,8 @@ class VTRSlicerWithText:
             char_img = self.char2array.get(text[i], self.unknown_token)
             width = char_img.shape[1]
             if width == 0:
+                # emojis consist of 2 symbols - one for color and one for shape
+                # we skip the color one as we do not need it
                 continue
             char_num += [i] * width
             char_ratio_l = np.concatenate((char_ratio_l, np.arange(1, 0, -1 / width)))
