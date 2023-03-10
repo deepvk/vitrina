@@ -25,6 +25,8 @@ class DatasetNLLB(IterableDataset):
             dataset = load_dataset("allenai/nllb", pair, split="train", streaming=True)
             self.datasets[pair] = iter(dataset)
 
+        np.random.seed(0)
+
     def __iter__(self):
         while True:
             random_pair = np.random.choice(self.pairs)
@@ -34,9 +36,7 @@ class DatasetNLLB(IterableDataset):
                 self.pairs.remove(random_pair)
                 continue
 
-            src, trg = [elem for elem in info["translation"].items()]
-
-            for elem in (src, trg):
+            for elem in info["translation"].items():
                 text = clean_text(elem[1])
                 label = self.lang2label[elem[0]]
                 slices = self.slicer(text)
