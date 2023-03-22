@@ -23,8 +23,8 @@ class DatasetNLLB(IterableDataset):
         self.max_seq_len = max_seq_len
         self.pairs = []
         self.probas = []
-        self.lang2label = {}
-        self.label2lang = {}
+        self.lang2label: dict = {}
+        self.label2lang: dict = {}
         label = 0
         for pair in tqdm(pairs[:2]):
             for lang in pair:
