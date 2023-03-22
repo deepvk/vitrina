@@ -8,24 +8,37 @@ from src.utils.slicer import VTRSlicer
 
 
 class DatasetNLLB(IterableDataset):
-    def __init__(self, char2array: dict, window_size: int = 30, stride: int = 5, max_seq_len: int = 512):
+    def __init__(
+        self,
+        pairs,
+        char2array: dict,
+        probas: dict,
+        window_size: int = 30,
+        stride: int = 5,
+        max_seq_len: int = 512,
+        random_seed: int = 42,
+    ):
         self.datasets = dict()
         self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
         self.max_seq_len = max_seq_len
-        self.pairs = get_dataset_config_names("allenai/nllb")
-        self.lang2label: dict[str, int] = {}
-        self.label2lang: dict[int, str] = {}
+        self.pairs = []
+        self.probas = []
+        self.lang2label = {}
+        self.label2lang = {}
         label = 0
-        for pair in tqdm(self.pairs):
-            for lang in pair.split("-"):
+        for pair in tqdm(pairs[:2]):
+            for lang in pair:
                 if lang not in self.lang2label:
                     self.lang2label[lang] = label
                     self.label2lang[label] = lang
                     label += 1
-            dataset = load_dataset("allenai/nllb", pair, split="train", streaming=True)
-            self.datasets[pair] = iter(dataset)
+            pair_name = f"{pair[0]}-{pair[1]}"
+            dataset = load_dataset("allenai/nllb", pair_name, split="train", streaming=True)
+            self.datasets[pair_name] = iter(dataset)
+            self.pairs.append(pair_name)
+            self.probas.append(probas[pair_name])
 
-        np.random.seed(0)
+        np.random.seed(random_seed)
 
     def __iter__(self):
         while True:
@@ -33,6 +46,7 @@ class DatasetNLLB(IterableDataset):
             try:
                 info = next(self.datasets[random_pair])
             except StopIteration:
+                self.probas.pop(self.pairs.index(random_pair))
                 self.pairs.remove(random_pair)
                 continue
 
