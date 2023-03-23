@@ -42,7 +42,7 @@ class DatasetNLLB(IterableDataset):
 
     def __iter__(self):
         while True:
-            random_pair = np.random.choice(self.pairs)
+            random_pair = np.random.choice(self.pairs, p=self.probas)
             try:
                 info = next(self.datasets[random_pair])
             except StopIteration:
