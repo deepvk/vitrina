@@ -26,7 +26,7 @@ class DatasetNLLB(IterableDataset):
         self.lang2label: dict = {}
         self.label2lang: dict = {}
         label = 0
-        for pair in tqdm(pairs[:2]):
+        for pair in tqdm(pairs):
             for lang in pair:
                 if lang not in self.lang2label:
                     self.lang2label[lang] = label
