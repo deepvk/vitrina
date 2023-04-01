@@ -44,8 +44,6 @@ class DatasetNLLB(IterableDataset):
     def __iter__(self):
         while True:
             random_pair = np.random.choice(self.pairs, p=self.probas)
-            print(random_pair)
-            print(self.datasets)
             try:
                 info = next(self.datasets[random_pair])
             except StopIteration:
