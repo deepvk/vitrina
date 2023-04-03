@@ -46,7 +46,7 @@ class Pretrain(nn.Module):
 
             unmasked_idx = np.where(mask == 0)[0]
             unmasked_slices.append(slices[i][unmasked_idx])
-            unmasked_texts.append(np.array(input_batch["texts"][i])[unmasked_idx[:len(input_batch["texts"][i]) - 1]])
+            unmasked_texts.append(np.array(input_batch["texts"][i])[unmasked_idx[: len(input_batch["texts"][i]) - 1]])
         unmasked_slices = torch.stack(unmasked_slices)
 
         slices = self.linear(slices_detached)
@@ -54,8 +54,11 @@ class Pretrain(nn.Module):
 
         slice_count = unmasked_slices.shape[1]
         unmasked_slices = unmasked_slices.view(batch_size * slice_count, 1, height, width)
-        result = {"ctc_loss": compute_ctc_loss(self.ctc_criterion, self.ocr, unmasked_slices, unmasked_texts,
-                                               self.char2int_dict)}
+        result = {
+            "ctc_loss": compute_ctc_loss(
+                self.ctc_criterion, self.ocr, unmasked_slices, unmasked_texts, self.char2int_dict
+            )
+        }
 
         encoded_text = self.positional_dec(encoded_text[0])
         decoded_text = self.decoder(encoded_text)
@@ -71,7 +74,7 @@ class Pretrain(nn.Module):
         slice_count = masked_slices.shape[1]
         masked_slices = masked_slices.view(batch_size, slice_count, height, width)
 
-        criterion = lpips.LPIPS(net='vgg').to(self.device)
+        criterion = lpips.LPIPS(net="vgg").to(self.device)
         result["lpips_loss"] = criterion(masked_slices, masked_originals).sum()
         result["loss"] = result["ctc_loss"] + result["lpips_loss"]
 

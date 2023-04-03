@@ -130,7 +130,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             num_classes=len(char2array.keys()),
         )
 
-        #model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, char2int_dict, ocr, vtr.alpha)
+        # model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, char2int_dict, ocr, vtr.alpha)
         model = Pretrain(model_config.emb_size, ocr, char2int_dict, "cuda")
 
     train(
