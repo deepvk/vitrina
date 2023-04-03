@@ -1,4 +1,4 @@
-from transformers import BertConfig, BertForSequenceClassification
+from transformers import BertConfig, BertForSequenceClassification, GPT2LMHeadModel, GPT2Config
 import torch
 from torch import nn
 from loguru import logger
@@ -21,9 +21,7 @@ class SequenceClassifier(nn.Module):
     ):
         super().__init__()
 
-        logger.info(
-            f"Initializing vanilla BERT classifier | hidden size: {config.emb_size}, " f"# layers: {config.num_layers}"
-        )
+        logger.info(f"Initializing BERT classifier | hidden size: {config.emb_size}, " f"# layers: {config.num_layers}")
 
         model_config = BertConfig(
             hidden_size=config.emb_size,

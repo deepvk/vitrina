@@ -14,3 +14,6 @@ setuptools~=65.5.0
 loguru~=0.6.0
 fonttools~=4.38.0
 ftfy~=6.1.1
+
+freetype~=2.12.1
+lpips~=0.1.4

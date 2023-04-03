@@ -18,6 +18,8 @@ from src.models.embedders.ttr import TTREmbedder
 from src.models.vtr.ocr import OCRHead
 from src.models.tasks import SequenceClassifier
 
+from src.models.pretraining import Pretrain
+
 
 def configure_arg_parser() -> ArgumentParser:
     arg_parser = ArgumentParser()
@@ -122,13 +124,14 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             f"# classes: {len(char2array.keys())}"
         )
         ocr = OCRHead(
-            input_size=vtr.out_channels * (vtr.font_size // vtr.pool_kernel_size ** (len(channels) - 1)),
+            input_size=16,
             hidden_size=vtr.hidden_size_ocr,
             num_layers=vtr.num_layers_ocr,
             num_classes=len(char2array.keys()),
         )
 
-        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, char2int_dict, ocr, vtr.alpha)
+        #model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, char2int_dict, ocr, vtr.alpha)
+        model = Pretrain(model_config.emb_size, ocr, char2int_dict, "cuda")
 
     train(
         model,

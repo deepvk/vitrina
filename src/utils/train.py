@@ -98,8 +98,8 @@ def train(
             if ocr_flag:
                 assert isinstance(train_dataset, VTRDatasetOCR)
 
-                log_dict["train/ctc_loss"] = model_output["ctc_loss"]
-                log_dict["train/ce_loss"] = model_output["ce_loss"]
+                log_dict["train/CTC_loss"] = model_output["ctc_loss"]
+                log_dict["train/LPIPS_loss"] = model_output["lpips_loss"]
 
             loss.backward()
             optimizer.step()
@@ -169,7 +169,7 @@ def evaluate_model(
 
         loss += output["loss"]
         if ocr_flag:
-            ce_loss += output["ce_loss"]
+            ce_loss += output["lpips_loss"]
             ctc_loss += output["ctc_loss"]
 
         true_labels = test_batch["labels"]
@@ -186,8 +186,8 @@ def evaluate_model(
 
     losses_dict = {f"{group}/loss": loss / len(dataloader)}
     if ocr_flag:
-        losses_dict[f"{group}/ce_loss"] = ce_loss / len(dataloader)
-        losses_dict[f"{group}/ctc_loss"] = ctc_loss / len(dataloader)
+        losses_dict[f"{group}/LPIPS_loss"] = ce_loss / len(dataloader)
+        losses_dict[f"{group}/CTC_loss"] = ctc_loss / len(dataloader)
 
     ground_truth = torch.cat(ground_truth).numpy()
     predictions = torch.cat(predictions).numpy()
