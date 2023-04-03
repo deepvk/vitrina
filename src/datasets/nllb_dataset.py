@@ -1,10 +1,28 @@
 import numpy as np
+import torch
 from datasets import load_dataset
+from src.utils.common import clean_text
+from src.utils.slicer import VTRSlicer
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
 from tqdm import tqdm
 
-from src.utils.common import clean_text
-from src.utils.slicer import VTRSlicer
+
+def collate_batch_common(slices: list[torch.Tensor], labels: list[int]):
+    # [batch size; most slices; font size; window size]
+    batched_slices = pad_sequence(slices, batch_first=True, padding_value=0.0).float()
+    bs, ms, _, _ = batched_slices.shape
+
+    # [batch size; most slices]
+    attention_mask = torch.zeros((bs, ms), dtype=torch.float)
+    for i, s in enumerate(slices):
+        attention_mask[i, : len(s)] = 1
+
+    return {
+        "slices": batched_slices,
+        "attention_mask": attention_mask,
+        "labels": torch.tensor(labels, dtype=torch.float),
+    }
 
 
 class DatasetNLLB(IterableDataset):
@@ -16,7 +34,7 @@ class DatasetNLLB(IterableDataset):
         stride: int = 5,
         max_seq_len: int = 512,
         random_seed: int = 42,
-        k: float = 1.0,
+        k: float = 0.3,
     ):
         self.datasets = dict()
         self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
@@ -58,3 +76,7 @@ class DatasetNLLB(IterableDataset):
                 slices = slices[: self.max_seq_len]
 
                 yield slices, label
+
+    def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
+        slices, labels = [list(item) for item in zip(*batch)]
+        return collate_batch_common(slices, labels)
