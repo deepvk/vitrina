@@ -110,8 +110,13 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
         test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
 
-        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
-
+        # model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
+        model = Pretrain(
+            vtr.font_size * vtr.window_size,
+            model_config.n_head,
+            model_config.num_layers,
+            "cuda",
+        )
     else:
         train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
         val_dataset = VTRDatasetOCR(val_data, ratio=vtr.ratio, *dataset_args) if val_data else None
@@ -135,9 +140,9 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             vtr.font_size * vtr.window_size,
             model_config.n_head,
             model_config.num_layers,
+            "cuda",
             ocr,
             char2int_dict,
-            "cuda",
             vtr.alpha,
         )
 
