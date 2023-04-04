@@ -12,14 +12,14 @@ from src.models.vtr.ocr import OCRHead
 
 class Pretrain(nn.Module):
     def __init__(
-            self,
-            emb_size: int = 512,
-            n_head: int = 8,
-            n_layers: int = 4,
-            device: str = "cpu",
-            ocr: OCRHead = None,
-            char2int_dict: dict = None,
-            alpha: float = 1,
+        self,
+        emb_size: int = 512,
+        n_head: int = 8,
+        n_layers: int = 4,
+        device: str = "cpu",
+        ocr: OCRHead = None,
+        char2int_dict: dict = None,
+        alpha: float = 1,
     ):
         super().__init__()
         config = BertConfig(hidden_size=emb_size, num_attention_heads=n_head)
@@ -62,7 +62,8 @@ class Pretrain(nn.Module):
                 unmasked_idx = np.where(mask == 0)[0]
                 unmasked_slices.append(slices[i][unmasked_idx[: len(slices[i]) - 1]])
                 unmasked_texts.append(
-                    np.array(input_batch["texts"][i])[unmasked_idx[: len(input_batch["texts"][i]) - 1]])
+                    np.array(input_batch["texts"][i])[unmasked_idx[: len(input_batch["texts"][i]) - 1]]
+                )
 
         slices = self.linear(slices_detached)
         encoded_text = self.encoder(inputs_embeds=slices)
