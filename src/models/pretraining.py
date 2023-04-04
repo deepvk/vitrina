@@ -11,21 +11,33 @@ from src.models.vtr.ocr import OCRHead
 
 
 class Pretrain(nn.Module):
-    def __init__(self, hidden_size: int, ocr: OCRHead, char2int_dict: dict, device: str):
+    def __init__(
+            self,
+            emb_size: int = 512,
+            n_head: int = 8,
+            n_layers: int = 4,
+            ocr: OCRHead = None,
+            char2int_dict: dict = None,
+            device: str = "cpu",
+            alpha: float = 1,
+    ):
         super().__init__()
-        config = BertConfig(hidden_size=512, num_attention_heads=8)
+        config = BertConfig(hidden_size=emb_size, num_attention_heads=n_head)
         self.encoder = BertModel(config)
-        self.positional_enc = PositionalEncoding(512)
-        self.positional_dec = PositionalEncoding(512)
-        self.masking = SpanMaskingGenerator(512)
-        self.linear = nn.Linear(512, 512)
+        self.positional_enc = PositionalEncoding(emb_size)
+        self.positional_dec = PositionalEncoding(emb_size)
+        self.masking = SpanMaskingGenerator(emb_size)
+        self.linear = nn.Linear(emb_size, emb_size)
         self.decoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=512, nhead=8, dim_feedforward=hidden_size), num_layers=4
+            nn.TransformerEncoderLayer(d_model=emb_size, nhead=n_head, dim_feedforward=emb_size), num_layers=n_layers
         )
         self.ocr = ocr
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
         self.char2int_dict = char2int_dict
         self.device = device
+        self.criterion = lpips.LPIPS(net="vgg").to(device)
+        self.emb_size = emb_size
+        self.alpha = alpha
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]):
 
@@ -39,11 +51,10 @@ class Pretrain(nn.Module):
         unmasked_slices = []
         unmasked_texts = []
         for i in range(batch_size):
-            mask = self.masking(512)
+            mask = self.masking(self.emb_size)
             masks.append(mask)
             masked_idx = np.where(mask == 1)[0]
             slices_detached[i][masked_idx] = grey_slice
-
             unmasked_idx = np.where(mask == 0)[0]
             unmasked_slices.append(slices[i][unmasked_idx])
             unmasked_texts.append(np.array(input_batch["texts"][i])[unmasked_idx[: len(input_batch["texts"][i]) - 1]])
@@ -74,8 +85,7 @@ class Pretrain(nn.Module):
         slice_count = masked_slices.shape[1]
         masked_slices = masked_slices.view(batch_size, slice_count, height, width)
 
-        criterion = lpips.LPIPS(net="vgg").to(self.device)
-        result["lpips_loss"] = criterion(masked_slices, masked_originals).sum()
-        result["loss"] = result["ctc_loss"] + result["lpips_loss"]
+        result["lpips_loss"] = self.criterion(masked_slices, masked_originals).sum()
+        result["loss"] = self.alpha * result["ctc_loss"] + result["lpips_loss"]
 
         return result
