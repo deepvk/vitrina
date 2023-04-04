@@ -51,21 +51,21 @@ class Pretrain(nn.Module):
         unmasked_slices = []
         unmasked_texts = []
         for i in range(batch_size):
-            mask = self.masking(self.emb_size)
+            mask = self.masking(len(slices[i]))
             masks.append(mask)
             masked_idx = np.where(mask == 1)[0]
+            masked_idx = masked_idx[masked_idx < len(slices_detached[i])]
+            if not masked_idx.size:
+                masked_idx = np.array([0])
             slices_detached[i][masked_idx] = grey_slice
-            unmasked_idx = np.where(mask == 0)[0]
-            unmasked_slices.append(slices[i][unmasked_idx])
             if self.ocr:
-                unmasked_texts.append(np.array(input_batch["texts"][i])[unmasked_idx[: len(input_batch["texts"][i]) - 1]])
-        unmasked_slices = torch.stack(unmasked_slices)
+                unmasked_idx = np.where(mask == 0)[0]
+                unmasked_slices.append(slices[i][unmasked_idx[: len(slices[i]) - 1]])
+                unmasked_texts.append(
+                    np.array(input_batch["texts"][i])[unmasked_idx[: len(input_batch["texts"][i]) - 1]])
 
         slices = self.linear(slices_detached)
         encoded_text = self.encoder(inputs_embeds=slices)
-
-        slice_count = unmasked_slices.shape[1]
-        unmasked_slices = unmasked_slices.view(batch_size * slice_count, 1, height, width)
 
         encoded_text = self.positional_dec(encoded_text[0])
         decoded_text = self.decoder(encoded_text)
@@ -74,6 +74,9 @@ class Pretrain(nn.Module):
         masked_originals = []
         for i in range(batch_size):
             masked_idx = np.where(masks[i] == 1)[0]
+            masked_idx = masked_idx[masked_idx < len(slices_detached[i])]
+            if not masked_idx.size:
+                masked_idx = np.array([0])
             masked_slices.append(decoded_text[i][masked_idx])
             masked_originals.append(input_batch["slices"][i][masked_idx])
         masked_originals = torch.stack(masked_originals)
@@ -83,6 +86,9 @@ class Pretrain(nn.Module):
 
         result = {"loss": self.criterion(masked_slices, masked_originals).sum()}
         if self.ocr:
+            unmasked_slices = torch.stack(unmasked_slices)
+            slice_count = unmasked_slices.shape[1]
+            unmasked_slices = unmasked_slices.view(batch_size * slice_count, 1, height, width)
             result["ctc_loss"] = compute_ctc_loss(
                 self.ctc_criterion, self.ocr, unmasked_slices, unmasked_texts, self.char2int_dict
             )
