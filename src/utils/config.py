@@ -64,9 +64,9 @@ class TransformerConfig:
 
     @classmethod
     def add_to_arg_parser(cls, arg_parser: ArgumentParser) -> ArgumentParser:
-        arg_parser.add_argument("--num-layers", type=int, default=1, help="Number of layers in encoder.")
+        arg_parser.add_argument("--num-layers", type=int, default=4, help="Number of layers in encoder.")
         arg_parser.add_argument("--emb-size", type=int, default=768, help="Embedding size.")
-        arg_parser.add_argument("--n-head", type=int, default=12, help="Number of heads in MHA layers.")
+        arg_parser.add_argument("--n-head", type=int, default=8, help="Number of heads in MHA layers.")
         arg_parser.add_argument("--dropout", type=float, default=0.0, help="Dropout rate.")
         arg_parser.add_argument("--num-classes", type=int, default=2, help="Number of labels' classes.")
         return arg_parser
