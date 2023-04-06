@@ -67,7 +67,6 @@ class DatasetNLLB(IterableDataset):
             except StopIteration:
                 dataset = load_dataset("allenai/nllb", random_pair, split="train", streaming=True)
                 self.datasets[random_pair] = iter(dataset)
-                continue
 
             for elem in info["translation"].items():
                 text = clean_text(elem[1])
