@@ -59,6 +59,9 @@ class DatasetNLLB(IterableDataset):
 
         np.random.seed(random_seed)
 
+    def get_num_classes(self):
+        return len(self.lang2label)
+
     def __iter__(self):
         while True:
             random_pair = np.random.choice(self.pairs, p=self.probas)
