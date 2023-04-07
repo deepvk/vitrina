@@ -84,3 +84,19 @@ class DatasetNLLB(IterableDataset):
     def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
         slices, labels = [list(item) for item in zip(*batch)]
         return collate_batch_common(slices, labels)
+
+
+class FloresDataset:
+    def __init__(self, lang2label):
+        self.lang2label = lang2label
+        self.langs = lang2label.keys()
+        self.dataset = load_dataset("facebook/flores", "all")["dev"]
+        self.data = []
+
+    def get_data(self):
+        for lang in self.langs:
+            column_name = f"sentence_{lang}"
+            sentences = self.dataset[column_name]
+            current_label = self.lang2label[lang]
+            self.data += [{"text": sentence, "label": current_label} for sentence in sentences]
+        return self.data
