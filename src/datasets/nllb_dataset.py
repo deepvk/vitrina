@@ -73,6 +73,8 @@ class DatasetNLLB(IterableDataset):
 
             for elem in info["translation"].items():
                 text = clean_text(elem[1])
+                if len(text) == 0:
+                    continue
                 label = self.lang2label[elem[0]]
                 slices = self.slicer(text)
                 slices = slices[: self.max_seq_len]
