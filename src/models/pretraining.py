@@ -4,6 +4,7 @@ from transformers import BertModel, BertConfig
 import numpy as np
 from torch.nn import CTCLoss
 import lpips
+import matplotlib.pyplot as plt
 
 from src.utils.common import PositionalEncoding, compute_ctc_loss
 from src.utils.masking import SpanMaskingGenerator
@@ -35,9 +36,11 @@ class Pretrain(nn.Module):
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
         self.char2int_dict = char2int_dict
         self.device = device
-        self.criterion = lpips.LPIPS(net="vgg").to(device)
+        #self.criterion = lpips.LPIPS(net="vgg").to(device)
+        self.criterion = nn.MSELoss()
         self.emb_size = emb_size
         self.alpha = alpha
+        self.iter = 0
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]):
 
@@ -55,8 +58,8 @@ class Pretrain(nn.Module):
             masks.append(mask)
             masked_idx = np.where(mask == 1)[0]
             masked_idx = masked_idx[masked_idx < len(slices_detached[i])]
-            if not masked_idx.size:
-                masked_idx = np.array([0])
+            if masked_idx.size < 10:
+                masked_idx = np.arange(10)
             slices_detached[i][masked_idx] = grey_slice
             if self.ocr:
                 unmasked_idx = np.where(mask == 0)[0]
@@ -76,14 +79,16 @@ class Pretrain(nn.Module):
         for i in range(batch_size):
             masked_idx = np.where(masks[i] == 1)[0]
             masked_idx = masked_idx[masked_idx < len(slices_detached[i])]
-            if not masked_idx.size:
-                masked_idx = np.array([0])
+            if masked_idx.size < 10:
+                masked_idx = np.arange(10)
             masked_slices.append(decoded_text[i][masked_idx])
             masked_originals.append(input_batch["slices"][i][masked_idx])
         masked_originals = torch.stack(masked_originals)
         masked_slices = torch.stack(masked_slices)
+
         slice_count = masked_slices.shape[1]
-        masked_slices = masked_slices.view(batch_size, slice_count, height, width)
+        masked_slices = masked_slices.view(batch_size * slice_count, height, width).unsqueeze(1)
+        masked_originals = masked_originals.view(batch_size * slice_count, height, width).unsqueeze(1)
 
         result = {"loss": self.criterion(masked_slices, masked_originals).sum()}
         if self.ocr:
@@ -95,5 +100,20 @@ class Pretrain(nn.Module):
             )
             result["lpips_loss"] = result["loss"]
             result["loss"] += self.alpha * result["ctc_loss"]
+
+        if self.iter % 100 == 0:
+            plt.rcParams["figure.figsize"] = (4, 2)
+            decoded = masked_slices[0]
+            orig = masked_originals[0]
+            plt.subplot(1, 2, 1)
+            plt.imshow(decoded.squeeze(0).cpu().detach().numpy())
+            plt.title("Decoded image")
+            plt.subplot(1, 2, 2)
+            plt.imshow(orig.squeeze(0).cpu().detach().numpy())
+            plt.title("Original image")
+            plt.suptitle(f"Iteration #{self.iter+1}")
+            plt.figtext(0.5, 0.1, f"Loss = {result['loss']}", ha='center')
+            plt.show()
+        self.iter += 1
 
         return result
