@@ -30,7 +30,7 @@ class DatasetNLLB(IterableDataset):
         self,
         char2array: dict,
         probas: dict,
-        window_size: int = 30,
+        window_size: int = 32,
         stride: int = 5,
         max_seq_len: int = 512,
         random_seed: int = 42,
