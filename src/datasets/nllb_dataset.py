@@ -40,7 +40,6 @@ class DatasetNLLB(IterableDataset):
         self.datasets = dict()
         self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
         self.max_seq_len = max_seq_len
-        print(f"len probas: {len(probas)}")
         self.pairs = list(probas.keys())
         self.probas = []
         self.lang2label: dict = {}
@@ -55,8 +54,6 @@ class DatasetNLLB(IterableDataset):
             dataset = load_dataset("allenai/nllb", pair, split="train", streaming=True)
             self.datasets[pair] = iter(dataset)
             self.probas.append(probas[pair] ** k)
-
-        print(self.lang2label)
 
         sum_probas = sum(self.probas)
         self.probas = [prob / sum_probas for prob in self.probas]
@@ -75,7 +72,6 @@ class DatasetNLLB(IterableDataset):
             try:
                 info = next(self.datasets[random_pair])
             except StopIteration:
-                print("stop iteration")
                 dataset = load_dataset("allenai/nllb", random_pair, split="train", streaming=True)
                 self.datasets[random_pair] = iter(dataset)
 
