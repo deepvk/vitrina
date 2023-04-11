@@ -43,7 +43,7 @@ def configure_arg_parser() -> ArgumentParser:
     arg_parser.add_argument(
         "--probas",
         type=str,
-        default="resources/nllb/probas.pkl",
+        default="resources/nllb/probas_nllb.pkl",
         help="Path to probabilities of language pairs [for lang detect task].",
     )
 
