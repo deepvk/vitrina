@@ -1,11 +1,12 @@
 import numpy as np
 import torch
 from datasets import load_dataset
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import IterableDataset, Dataset
+from tqdm import tqdm
+
 from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer
-from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import IterableDataset
-from tqdm import tqdm
 
 
 def collate_batch_common(slices: list[torch.Tensor], labels: list[int]):
@@ -39,6 +40,7 @@ class DatasetNLLB(IterableDataset):
         self.datasets = dict()
         self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
         self.max_seq_len = max_seq_len
+        print(f"len probas: {len(probas)}")
         self.pairs = list(probas.keys())
         self.probas = []
         self.lang2label: dict = {}
@@ -54,6 +56,8 @@ class DatasetNLLB(IterableDataset):
             self.datasets[pair] = iter(dataset)
             self.probas.append(probas[pair] ** k)
 
+        print(self.lang2label)
+
         sum_probas = sum(self.probas)
         self.probas = [prob / sum_probas for prob in self.probas]
 
@@ -62,12 +66,16 @@ class DatasetNLLB(IterableDataset):
     def get_num_classes(self):
         return len(self.lang2label)
 
+    def get_lang2label(self):
+        return self.lang2label
+
     def __iter__(self):
         while True:
             random_pair = np.random.choice(self.pairs, p=self.probas)
             try:
                 info = next(self.datasets[random_pair])
             except StopIteration:
+                print("stop iteration")
                 dataset = load_dataset("allenai/nllb", random_pair, split="train", streaming=True)
                 self.datasets[random_pair] = iter(dataset)
 
@@ -86,17 +94,38 @@ class DatasetNLLB(IterableDataset):
         return collate_batch_common(slices, labels)
 
 
-class FloresDataset:
-    def __init__(self, lang2label):
+class FloresDataset(Dataset):
+    def __init__(
+        self,
+        lang2label: dict,
+        char2array: dict,
+        window_size: int = 32,
+        stride: int = 5,
+        max_seq_len: int = 512,
+        split="dev",
+    ):
+        assert split in ["dev", "devtest"], "Split for FLORES dataset must be dev or devtest"
         self.lang2label = lang2label
         self.langs = lang2label.keys()
-        self.dataset = load_dataset("facebook/flores", "all")["dev"]
+        self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
+        self.dataset = load_dataset("facebook/flores", "all")[split]
         self.data = []
-
-    def get_data(self):
+        self.max_seq_len = max_seq_len
         for lang in self.langs:
             column_name = f"sentence_{lang}"
             sentences = self.dataset[column_name]
             current_label = self.lang2label[lang]
-            self.data += [{"text": sentence, "label": current_label} for sentence in sentences]
-        return self.data
+            self.data += [{"text": clean_text(sentence), "label": current_label} for sentence in sentences]
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, index) -> tuple[torch.Tensor, int]:
+        # [n slices; font size; window size]
+        slices = self.slicer(self.data[index]["text"])
+        slices = slices[: self.max_seq_len]
+        return slices, self.data[index]["label"]
+
+    def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
+        slices, labels = [list(item) for item in zip(*batch)]
+        return collate_batch_common(slices, labels)
