@@ -120,8 +120,13 @@ def train_vtr_encoder(args: Namespace, train_data: list = None, val_data: list =
         train_dataset: IterableDataset = DatasetNLLB(
             char2array, probas, vtr.window_size, vtr.stride, training_config.max_seq_len
         )
-        val_dataset = None
-        test_dataset = None
+        lang2label = train_dataset.get_lang2label()
+        val_dataset = FloresDataset(
+            lang2label, char2array, vtr.window_size, vtr.stride, training_config.max_seq_len, "dev"
+        )
+        test_dataset = FloresDataset(
+            lang2label, char2array, vtr.window_size, vtr.stride, training_config.max_seq_len, "devtest"
+        )
 
         model_config.num_classes = train_dataset.get_num_classes()
 
