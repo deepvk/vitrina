@@ -27,6 +27,7 @@ def train(
     val_dataset: Dataset = None,
     test_dataset: Dataset = None,
     ocr_flag: bool = False,
+    lang_detect_flag: bool = False,
 ):
     logger.info(f"Fix random state: {config.random_state}")
     set_deterministic_mode(config.random_state)
@@ -35,12 +36,15 @@ def train(
     logger.info(f"Using device: {device}")
 
     logger.info(f"Create train dataloader | batch size: {config.batch_size}")
+    
+    shuffle = True if not lang_detect_flag else False
+    
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
         collate_fn=train_dataset.collate_function,  # type: ignore
         num_workers=config.num_workers,
-        shuffle=True,
+        shuffle=shuffle,
     )
     val_dataloader = None
     if val_dataset is not None:
@@ -70,7 +74,7 @@ def train(
 
     logger.info(f"Using AdamW optimizer | lr: {config.lr}")
     optimizer = AdamW(model.parameters(), config.lr, betas=(config.beta1, config.beta2))
-    num_training_steps = len(train_dataloader) * config.epochs
+    num_training_steps = len(train_dataloader) * config.epochs if not lang_detect_flag else 10000 #change
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=config.warmup, num_training_steps=num_training_steps
     )
