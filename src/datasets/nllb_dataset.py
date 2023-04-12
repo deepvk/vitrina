@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer
+from src.models.augmentations_functions import Augmentation
 
 
 def collate_batch_common(slices: list[torch.Tensor], labels: list[int]):
@@ -31,11 +32,15 @@ class DatasetNLLB(IterableDataset):
         self,
         char2array: dict,
         probas: dict,
+        leet: dict,
+        letters: dict,
         window_size: int = 32,
         stride: int = 5,
         max_seq_len: int = 512,
         random_seed: int = 42,
-        k: float = 0.3,
+        proba_per_text: float = 0.2,
+        proba_per_char: float = 0.2,
+        k: float = 0.3, 
     ):
         self.datasets = dict()
         self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
@@ -44,6 +49,9 @@ class DatasetNLLB(IterableDataset):
         self.probas = []
         self.lang2label: dict = {}
         self.label2lang: dict = {}
+        self.proba_per_text = proba_per_text
+        self.proba_per_char = proba_per_char
+        self.augmentation = Augmentation(leet=leet, letters=letters)
         label = 0
         for pair in tqdm(self.pairs):
             for lang in pair.split("-"):
@@ -77,6 +85,7 @@ class DatasetNLLB(IterableDataset):
 
             for elem in info["translation"].items():
                 text = clean_text(elem[1])
+                text = self.augmentation(text, self.proba_per_text, self.proba_per_char)
                 if len(text) == 0:
                     continue
                 label = self.lang2label[elem[0]]
@@ -95,9 +104,13 @@ class FloresDataset(Dataset):
         self,
         lang2label: dict,
         char2array: dict,
+        leet: dict,
+        letters: dict,
         window_size: int = 32,
         stride: int = 5,
         max_seq_len: int = 512,
+        proba_per_text: float = 0.2,
+        proba_per_char: float = 0.2,
         split="dev",
     ):
         assert split in ["dev", "devtest"], "Split for FLORES dataset must be dev or devtest"
@@ -107,11 +120,17 @@ class FloresDataset(Dataset):
         self.dataset = load_dataset("facebook/flores", "all")[split]
         self.data = []
         self.max_seq_len = max_seq_len
+        self.augmentation = Augmentation(leet=leet, letters=letters)
+        self.proba_per_text = proba_per_text
+        self.proba_per_char = proba_per_char
         for lang in self.langs:
             column_name = f"sentence_{lang}"
             sentences = self.dataset[column_name]
             current_label = self.lang2label[lang]
-            self.data += [{"text": clean_text(sentence), "label": current_label} for sentence in sentences]
+            for sentence in sentences:
+                text = clean_text(sentence)
+                text = self.augmentation(text, self.proba_per_text, self.proba_per_char)
+                self.data.append({"text": text, "label": current_label})
 
     def __len__(self) -> int:
         return len(self.data)
