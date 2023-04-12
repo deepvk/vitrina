@@ -5,7 +5,7 @@ from loguru import logger
 from torch.utils.data import Dataset, IterableDataset
 
 from src.datasets.bert_dataset import BERTDataset
-from src.datasets.nllb_dataset import DatasetNLLB
+from src.datasets.nllb_dataset import DatasetNLLB, FloresDataset
 from src.datasets.bert_dataset_sl import BERTDatasetSL
 from src.datasets.vtr_dataset import VTRDataset, VTRDatasetOCR
 from src.datasets.vtr_dataset_sl import VTRDatasetSL
