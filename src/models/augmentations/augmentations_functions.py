@@ -2,31 +2,36 @@ import random
 import numpy as np
 
 
-class SwapAugmentation:
+class LetterAugmentation:  # Leet or Clusters
+    def __init__(self, letters):
+        self.letters = letters
+
+    def __call__(self, char):
+        symbols = []
+        if char in self.letters.keys() and len(self.letters[char]) != 0:
+            random_symb = random.choice(self.letters[char])
+            return random_symb
+        return char
+
+
+class DiacriticsAugmentation:
     def __init__(self):
         pass
 
-    def __call__(self, text, proba):
+    def __call__(self, char, count_adds=1):
+        char_with_diac = char
+        for i in range(count_adds):
+            randBytes = random.randint(0x300, 0x36F).to_bytes(2, "big")
+            char_with_diac += randBytes.decode("utf-16be")
+        return char_with_diac
 
-        if len(text) < 2:
-            return text
-        words = text.split()
-        symbols = []
-        for word in words:
 
-            for i in range(0, len(word) - 1, 2):
-                replace = np.random.binomial(1, proba)
-                if replace:
-                    symbols += [word[i + 1], word[i]]
-                else:
-                    symbols += [word[i], word[i + 1]]
+class ProbelAugmentation:
+    def __init__(self):
+        pass
 
-            if len(word) % 2 == 1:
-                symbols.append(word[-1])
-
-            symbols.append(" ")
-
-        return "".join(symbols).strip()
+    def __call__(self, char):
+        return char + " "
 
 
 class CamAugmentation:
@@ -45,50 +50,25 @@ class CamAugmentation:
         return "".join(symbols).strip()
 
 
-class LetterAugmentation:  # Leet or Clusters
-    def __init__(self, letters):
-        self.letters = letters
+class Augmentation:
+    def __init__(self, leet, clusters):
+        diacritics = DiacriticsAugmentation()
+        probels = ProbelAugmentation()
+        clusters = LetterAugmentation(clusters)
+        leet = LetterAugmentation(leet)
+        self.augmentations = [diacritics, probels, clusters, leet]
 
-    def __call__(self, text, proba):
+    def __call__(self, text, proba_per_text, proba_per_char):
+        need_to_replace = np.random.binomial(1, proba_per_text)
+        if not need_to_replace:
+            return text
+
         symbols = []
         for ch in text:
-            replace = np.random.binomial(1, proba)
-            if replace and ch in self.letters.keys() and len(self.letters[ch]) != 0:
-                random_symb = random.choice(self.letters[ch])
-                symbols.append(random_symb)
-            else:
-                symbols.append(ch)
-        return "".join(symbols)
-
-
-class ProbelsAugmentation:
-    def __init__(self):
-        pass
-
-    def __call__(self, text, proba):
-        symbols = []
-        for ch in text:
-            replace = np.random.binomial(1, proba)
+            replace = np.random.binomial(1, proba_per_char)
             if replace and ch != " ":
-                symbols.append(" ")
-            symbols.append(ch)
-        return "".join(symbols)
-
-
-class DiacriticsAugmentation:
-    def __init__(self):
-        pass
-
-    def __call__(self, text, proba, count_adds=1):
-        symbols = []
-        for ch in text:
-            replace = np.random.binomial(1, proba)
-            if replace and ch != " ":
-                char_with_diac = ch
-                for i in range(count_adds):
-                    randBytes = random.randint(0x300, 0x36F).to_bytes(2, "big")
-                    char_with_diac += randBytes.decode("utf-16be")
-                symbols.append(char_with_diac)
+                random_augm = random.choice(self.augmentations)
+                symbols.append(random_augm(ch))
             else:
                 symbols.append(ch)
         return "".join(symbols)
