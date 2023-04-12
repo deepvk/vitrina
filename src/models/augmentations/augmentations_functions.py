@@ -73,3 +73,22 @@ class ProbelsAugmentation:
                 symbols.append(" ")
             symbols.append(ch)
         return "".join(symbols)
+
+
+class DiacriticsAugmentation:
+    def __init__(self):
+        pass
+
+    def __call__(self, text, proba, count_adds=1):
+        symbols = []
+        for ch in text:
+            replace = np.random.binomial(1, proba)
+            if replace and ch != " ":
+                char_with_diac = ch
+                for i in range(count_adds):
+                    randBytes = random.randint(0x300, 0x36F).to_bytes(2, "big")
+                    char_with_diac += randBytes.decode("utf-16be")
+                symbols.append(char_with_diac)
+            else:
+                symbols.append(ch)
+        return "".join(symbols)
