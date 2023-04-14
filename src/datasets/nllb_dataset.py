@@ -35,7 +35,7 @@ class DatasetNLLB(IterableDataset):
         stride: int = 5,
         max_seq_len: int = 512,
         random_seed: int = 42,
-        k: float = 0.3, 
+        k: float = 0.3,
     ):
         self.datasets = dict()
         self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
