@@ -36,9 +36,9 @@ def train(
     logger.info(f"Using device: {device}")
 
     logger.info(f"Create train dataloader | batch size: {config.batch_size}")
-    
+
     shuffle = True if not lang_detect_flag else False
-    
+
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
