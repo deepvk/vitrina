@@ -56,7 +56,6 @@ class DatasetNLLB(IterableDataset):
 
         sum_probas = sum(self.probas)
         self.probas = [prob / sum_probas for prob in self.probas]
-        
 
     def get_num_classes(self):
         return len(self.lang2label)
