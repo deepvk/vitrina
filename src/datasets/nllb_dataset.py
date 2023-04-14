@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer
-from src.models.augmentations_functions import Augmentation
+from src.models.augmentations.augmentations_functions import Augmentation
 
 
 def collate_batch_common(slices: list[torch.Tensor], labels: list[int]):
