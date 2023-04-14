@@ -46,8 +46,6 @@ class DatasetNLLB(IterableDataset):
         self.probas = []
         self.lang2label: dict = {}
         self.label2lang: dict = {}
-        self.proba_per_text = proba_per_text
-        self.proba_per_char = proba_per_char
         label = 0
         for pair in tqdm(self.pairs):
             for lang in pair.split("-"):
@@ -113,8 +111,6 @@ class FloresDataset(Dataset):
         self.dataset = load_dataset("facebook/flores", "all")[split]
         self.data = []
         self.max_seq_len = max_seq_len
-        self.proba_per_text = proba_per_text
-        self.proba_per_char = proba_per_char
         for lang in self.langs:
             column_name = f"sentence_{lang}"
             sentences = self.dataset[column_name]
