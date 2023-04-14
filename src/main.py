@@ -2,10 +2,9 @@ import pickle
 from argparse import ArgumentParser, Namespace
 
 from loguru import logger
-from torch.utils.data import Dataset, IterableDataset
+from torch.utils.data import Dataset
 
 from src.datasets.bert_dataset import BERTDataset
-from src.datasets.nllb_dataset import DatasetNLLB, FloresDataset
 from src.datasets.bert_dataset_sl import BERTDatasetSL
 from src.datasets.vtr_dataset import VTRDataset, VTRDatasetOCR
 from src.datasets.vtr_dataset_sl import VTRDatasetSL
@@ -40,15 +39,7 @@ def configure_arg_parser() -> ArgumentParser:
         help="Path to char2array [only for VTR model].",
     )
 
-    arg_parser.add_argument(
-        "--probas",
-        type=str,
-        default="resources/nllb/probas_nllb.pkl",
-        help="Path to probabilities of language pairs [for lang detect task].",
-    )
-
     arg_parser.add_argument("--no-ocr", action="store_true", help="Do not use OCR with visual models.")
-    arg_parser.add_argument("--lang-detect", action="store_true", help="Use iterable dataset for language detection.")
 
     arg_parser = VTRConfig.add_to_arg_parser(arg_parser)
     arg_parser = TransformerConfig.add_to_arg_parser(arg_parser)
@@ -92,7 +83,7 @@ def train_vanilla_encoder_sl(args: Namespace, train_data: list, val_data: list =
     train(model, train_dataset, training_config, sl=True, val_dataset=val_dataset, test_dataset=test_dataset)
 
 
-def train_vtr_encoder(args: Namespace, train_data: list = None, val_data: list = None, test_data: list = None):
+def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, test_data: list = None):
     logger.info("Training Visual Token Representation Encoder for sequence classification.")
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
@@ -112,25 +103,7 @@ def train_vtr_encoder(args: Namespace, train_data: list = None, val_data: list =
         char2array = pickle.load(f)
 
     dataset_args = (char2array, vtr.window_size, vtr.stride, training_config.max_seq_len)
-
-    if args.lang_detect:
-        with open(args.probas, "rb") as f:
-            probas = pickle.load(f)
-
-        train_dataset = DatasetNLLB(char2array, probas, vtr.window_size, vtr.stride, training_config.max_seq_len)
-        lang2label = train_dataset.get_lang2label()
-        val_dataset = FloresDataset(
-            lang2label, char2array, vtr.window_size, vtr.stride, training_config.max_seq_len, "dev"
-        )
-        test_dataset = FloresDataset(
-            lang2label, char2array, vtr.window_size, vtr.stride, training_config.max_seq_len, "devtest"
-        )
-
-        model_config.num_classes = train_dataset.get_num_classes()
-
-        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
-
-    elif args.no_ocr:
+    if args.no_ocr:
         train_dataset: Dataset = VTRDataset(train_data, *dataset_args)
         val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
         test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
@@ -165,7 +138,6 @@ def train_vtr_encoder(args: Namespace, train_data: list = None, val_data: list =
         val_dataset=val_dataset,
         test_dataset=test_dataset,
         ocr_flag=not args.no_ocr,
-        lang_detect_flag=args.lang_detect,
     )
 
 
@@ -198,19 +170,16 @@ def train_vtr_encoder_sl(args: Namespace, train_data: list, val_data: list = Non
 
 
 def main(args: Namespace):
-    if not args.vtr and not args.tokenizer and not args.lang_detect:
+    if not args.vtr and not args.tokenizer:
         logger.error("You should specify tokenizer path for vanilla model.")
         return
 
     logger.info("Loading data...")
-
-    train_data = load_json(args.train_data) if not args.lang_detect else None
+    train_data = load_json(args.train_data)
     val_data = load_json(args.val_data) if args.val_data else None
     test_data = load_json(args.test_data) if args.test_data else None
 
-    if args.lang_detect:
-        train_vtr_encoder(args)
-    elif args.vtr and args.sl:
+    if args.vtr and args.sl:
         train_vtr_encoder_sl(args, train_data, val_data, test_data)
     elif args.vtr:
         train_vtr_encoder(args, train_data, val_data, test_data)
