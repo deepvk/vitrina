@@ -117,7 +117,7 @@ def train_vtr_encoder(args: Namespace, train_data: list = None, val_data: list =
         with open(args.probas, "rb") as f:
             probas = pickle.load(f)
 
-        train_dataset: IterableDataset = DatasetNLLB(
+        train_dataset = DatasetNLLB(
             char2array, probas, vtr.window_size, vtr.stride, training_config.max_seq_len
         )
         lang2label = train_dataset.get_lang2label()
