@@ -34,7 +34,6 @@ class DatasetNLLB(IterableDataset):
         window_size: int = 32,
         stride: int = 5,
         max_seq_len: int = 512,
-        random_seed: int = 42,
         k: float = 0.3,
     ):
         self.datasets = dict()
@@ -57,8 +56,7 @@ class DatasetNLLB(IterableDataset):
 
         sum_probas = sum(self.probas)
         self.probas = [prob / sum_probas for prob in self.probas]
-
-        np.random.seed(random_seed)
+        
 
     def get_num_classes(self):
         return len(self.lang2label)
