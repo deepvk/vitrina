@@ -74,7 +74,8 @@ def train(
 
     logger.info(f"Using AdamW optimizer | lr: {config.lr}")
     optimizer = AdamW(model.parameters(), config.lr, betas=(config.beta1, config.beta2))
-    num_training_steps = len(train_dataloader) * config.epochs if not lang_detect_flag else 10000 #change
+    num_training_steps_iterable = 100000
+    num_training_steps = len(train_dataloader) * config.epochs if not lang_detect_flag else num_training_steps_iterable
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=config.warmup, num_training_steps=num_training_steps
     )
