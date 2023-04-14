@@ -31,7 +31,7 @@ class SequenceClassifier(nn.Module):
             num_attention_heads=config.n_head,
             hidden_dropout_prob=config.dropout,
             attention_probs_dropout_prob=config.dropout,
-            num_classes=config.num_classes,
+            num_labels=config.num_classes,
         )
         self.backbone = BertForSequenceClassification(model_config)
         self.embedder = embedder
