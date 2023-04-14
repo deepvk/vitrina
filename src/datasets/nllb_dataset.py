@@ -7,7 +7,6 @@ from tqdm import tqdm
 
 from src.utils.common import clean_text
 from src.utils.slicer import VTRSlicer
-from src.models.augmentations.augmentations_functions import Augmentation
 
 
 def collate_batch_common(slices: list[torch.Tensor], labels: list[int]):
@@ -38,8 +37,6 @@ class DatasetNLLB(IterableDataset):
         stride: int = 5,
         max_seq_len: int = 512,
         random_seed: int = 42,
-        proba_per_text: float = 0.2,
-        proba_per_char: float = 0.2,
         k: float = 0.3, 
     ):
         self.datasets = dict()
@@ -51,7 +48,6 @@ class DatasetNLLB(IterableDataset):
         self.label2lang: dict = {}
         self.proba_per_text = proba_per_text
         self.proba_per_char = proba_per_char
-        self.augmentation = Augmentation(leet=leet, letters=letters)
         label = 0
         for pair in tqdm(self.pairs):
             for lang in pair.split("-"):
@@ -85,7 +81,6 @@ class DatasetNLLB(IterableDataset):
 
             for elem in info["translation"].items():
                 text = clean_text(elem[1])
-                text = self.augmentation(text, self.proba_per_text, self.proba_per_char)
                 if len(text) == 0:
                     continue
                 label = self.lang2label[elem[0]]
@@ -109,8 +104,6 @@ class FloresDataset(Dataset):
         window_size: int = 32,
         stride: int = 5,
         max_seq_len: int = 512,
-        proba_per_text: float = 0.2,
-        proba_per_char: float = 0.2,
         split="dev",
     ):
         assert split in ["dev", "devtest"], "Split for FLORES dataset must be dev or devtest"
@@ -120,7 +113,6 @@ class FloresDataset(Dataset):
         self.dataset = load_dataset("facebook/flores", "all")[split]
         self.data = []
         self.max_seq_len = max_seq_len
-        self.augmentation = Augmentation(leet=leet, letters=letters)
         self.proba_per_text = proba_per_text
         self.proba_per_char = proba_per_char
         for lang in self.langs:
@@ -129,7 +121,6 @@ class FloresDataset(Dataset):
             current_label = self.lang2label[lang]
             for sentence in sentences:
                 text = clean_text(sentence)
-                text = self.augmentation(text, self.proba_per_text, self.proba_per_char)
                 self.data.append({"text": text, "label": current_label})
 
     def __len__(self) -> int:
