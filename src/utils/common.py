@@ -152,7 +152,7 @@ def masking(num_patches, ratio=0.25):
         return mask
 
     while len(masked_patches_idx) < max_masked_patches and failures < 100:
-        mask_len = random.randint(1, min(6, math.ceil(num_patches * ratio)))
+        mask_len = random.randint(1, min(6, max_masked_patches))
         left_patch = random.randint(0, num_patches - mask_len)
         right_patch = left_patch + mask_len
 
