@@ -128,8 +128,13 @@ def compute_ctc_loss(
     targets = torch.LongTensor([char2int_dict[c] for c in chars])
 
     get_len = np.vectorize(len)
-    target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
-
+    #target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
+    target_lengths = []
+    for arr in texts:
+        if not len(arr):
+            continue
+        target_lengths.append(torch.from_numpy(get_len(arr)))
+    target_lengths = torch.cat(target_lengths, dim=0)
     ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
     ctc_loss /= len(texts)
 
