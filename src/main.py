@@ -129,7 +129,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             f"# classes: {len(char2array.keys())}"
         )
         ocr = OCRHead(
-            input_size=16,
+            input_size=vtr.font_size,
             hidden_size=vtr.hidden_size_ocr,
             num_layers=vtr.num_layers_ocr,
             num_classes=len(char2array.keys()),
@@ -144,6 +144,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             ocr,
             char2int_dict,
             vtr.alpha,
+            model_config.dropout,
         )
 
     train(

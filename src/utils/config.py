@@ -67,7 +67,7 @@ class TransformerConfig:
         arg_parser.add_argument("--num-layers", type=int, default=4, help="Number of layers in encoder.")
         arg_parser.add_argument("--emb-size", type=int, default=768, help="Embedding size.")
         arg_parser.add_argument("--n-head", type=int, default=8, help="Number of heads in MHA layers.")
-        arg_parser.add_argument("--dropout", type=float, default=0.0, help="Dropout rate.")
+        arg_parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate.")
         arg_parser.add_argument("--num-classes", type=int, default=2, help="Number of labels' classes.")
         return arg_parser
 
@@ -79,6 +79,7 @@ class TrainingConfig:
     epochs: int = 10
 
     lr: float = 5e-5
+    weight_decay: float = 0.01
     warmup: int = 1000
     beta1: float = 0.9
     beta2: float = 0.999
@@ -102,6 +103,7 @@ class TrainingConfig:
         arg_parser.add_argument("--batch-size", type=int, default=32, help="Batch size.")
         arg_parser.add_argument("--epochs", type=int, default=10, help="Number of epochs.")
         arg_parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate.")
+        arg_parser.add_argument("--weight-decay", type=float, default=0.01, help="Weight decay parameter.")
         arg_parser.add_argument("--warmup", type=int, default=1000, help="Number of warmup steps.")
         arg_parser.add_argument("--beta1", type=float, default=0.9, help="Beta1 for Adam.")
         arg_parser.add_argument("--beta2", type=float, default=0.999, help="Beta2 for Adam.")

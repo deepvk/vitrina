@@ -40,7 +40,7 @@ class Pretrain(nn.Module):
         self.emb_size = emb_size
         self.alpha = alpha
         self.iter = 0
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]):
 

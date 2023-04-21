@@ -189,7 +189,7 @@ class PositionalEncoding(nn.Module):
     def __init__(self, hidden_size: int, dropout=0.1, max_len=512):
         super(PositionalEncoding, self).__init__()
 
-        self.dropout = nn.Dropout(p=dropout)
+        #self.dropout = nn.Dropout(p=dropout)
 
         self.pe = nn.Parameter(torch.zeros(1, max_len, hidden_size))
         # position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
@@ -203,4 +203,4 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x + self.pe[:, : x.size(1), :]
-        return self.dropout(x)
+        return x
