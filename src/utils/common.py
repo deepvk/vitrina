@@ -141,6 +141,36 @@ def compute_ctc_loss(
     return ctc_loss
 
 
+def masking(num_patches, ratio=0.25):
+    masked_patches_idx = set()
+    neighbours_idx = set()
+    failures = 0
+    mask = np.zeros(shape=num_patches, dtype=np.int)
+
+    max_masked_patches = math.floor(num_patches * ratio)
+    if max_masked_patches == 0:
+        return mask
+
+    while len(masked_patches_idx) < max_masked_patches and failures < 100:
+        mask_len = random.randint(1, min(6, math.ceil(num_patches * ratio)))
+        left_patch = random.randint(0, num_patches - mask_len)
+        right_patch = left_patch + mask_len
+
+        cur_masked = set(range(left_patch, right_patch))
+        cur_neighbours = set(range(left_patch - mask_len, left_patch)).union(range(right_patch, right_patch + mask_len))
+
+        if not cur_masked.intersection(neighbours_idx) and not cur_neighbours.intersection(masked_patches_idx):
+            masked_patches_idx.update(cur_masked)
+            neighbours_idx.update(cur_neighbours)
+            failures = 0
+        else:
+            failures += 1
+
+    mask[list(masked_patches_idx)] = 1
+
+    return mask
+
+
 class BceLossForTokenClassification(nn.Module):
     def __init__(self):
         super().__init__()
