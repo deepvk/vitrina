@@ -1,13 +1,11 @@
 import torch.nn as nn
 import torch
-from transformers import BertModel, BertConfig
 import numpy as np
 from torch.nn import CTCLoss
 import lpips
 import matplotlib.pyplot as plt
 
-from src.utils.common import PositionalEncoding, compute_ctc_loss
-from src.utils.masking import SpanMaskingGenerator
+from src.utils.common import PositionalEncoding, compute_ctc_loss, masking
 from src.models.vtr.ocr import OCRHead
 
 
@@ -23,11 +21,12 @@ class Pretrain(nn.Module):
         alpha: float = 1,
     ):
         super().__init__()
-        config = BertConfig(hidden_size=emb_size, num_attention_heads=n_head)
-        self.encoder = BertModel(config)
+        self.encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=emb_size, nhead=n_head, dim_feedforward=emb_size), num_layers=n_layers
+        )
         self.positional_enc = PositionalEncoding(emb_size)
         self.positional_dec = PositionalEncoding(emb_size)
-        self.masking = SpanMaskingGenerator(emb_size)
+        # self.masking = SpanMaskingGenerator(emb_size)
         self.linear = nn.Linear(emb_size, emb_size)
         self.decoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=emb_size, nhead=n_head, dim_feedforward=emb_size), num_layers=n_layers
@@ -36,65 +35,62 @@ class Pretrain(nn.Module):
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
         self.char2int_dict = char2int_dict
         self.device = device
-        #self.criterion = lpips.LPIPS(net="vgg").to(device)
-        self.criterion = nn.MSELoss()
+        self.criterion = lpips.LPIPS(net="vgg").to(device)
+        # self.criterion = nn.MSELoss()
         self.emb_size = emb_size
         self.alpha = alpha
         self.iter = 0
+        self.dropout = nn.Dropout(0.1)
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]):
 
         batch_size, slice_count, height, width = input_batch["slices"].shape
-        slices = input_batch["slices"].view(batch_size, slice_count, height * width)
-        pos_slices = self.positional_enc(slices)
-        slices_detached = pos_slices.detach()
+        slices = input_batch["slices"].view(batch_size, slice_count, height * width).clone()
 
         grey_slice = torch.full((height, width), 128, dtype=torch.float32, device=self.device).flatten()
         masks = []
         unmasked_slices = []
         unmasked_texts = []
         for i in range(batch_size):
-            mask = self.masking(len(slices[i]))
+            not_padded_len = torch.sum(input_batch["attention_mask"][i], dtype=torch.int).item()
+            mask = masking(not_padded_len)
             masks.append(mask)
             masked_idx = np.where(mask == 1)[0]
-            masked_idx = masked_idx[masked_idx < len(slices_detached[i])]
-            if masked_idx.size < 10:
-                masked_idx = np.arange(10)
-            slices_detached[i][masked_idx] = grey_slice
-            if self.ocr:
-                unmasked_idx = np.where(mask == 0)[0]
-                unmasked_slices.append(slices[i][unmasked_idx[: len(slices[i]) - 1]])
-                unmasked_texts.append(
-                    np.array(input_batch["texts"][i])[unmasked_idx[: len(input_batch["texts"][i]) - 1]]
-                )
+            slices[i][masked_idx] = grey_slice
 
-        slices = self.linear(slices_detached)
-        encoded_text = self.encoder(inputs_embeds=slices)
+        slices = self.positional_enc(slices).permute(1, 0, 2)
+        #slices = self.linear(slices).permute(1, 0, 2)
+        encoded_text = self.encoder(slices, src_key_padding_mask=input_batch["attention_mask"]).permute(1, 0, 2)
+        encoded_text = self.dropout(encoded_text)
 
-        encoded_text = self.positional_dec(encoded_text[0])
-        decoded_text = self.decoder(encoded_text)
+        if self.ocr:
+            for i in range(batch_size):
+                unmasked_idx = np.where(masks[i] == 0)[0]
+                unmasked_slices.append(encoded_text[i][unmasked_idx])
+                unmasked_texts.append(np.array(input_batch["texts"][i])[unmasked_idx])
+
+        encoded_text = self.positional_dec(encoded_text).permute(1, 0, 2)
+        decoded_text = self.decoder(encoded_text, src_key_padding_mask=input_batch["attention_mask"]).permute(1, 0, 2)
+        decoded_text = self.dropout(decoded_text)
 
         masked_slices = []
         masked_originals = []
         for i in range(batch_size):
             masked_idx = np.where(masks[i] == 1)[0]
-            masked_idx = masked_idx[masked_idx < len(slices_detached[i])]
-            if masked_idx.size < 10:
-                masked_idx = np.arange(10)
             masked_slices.append(decoded_text[i][masked_idx])
             masked_originals.append(input_batch["slices"][i][masked_idx])
-        masked_originals = torch.stack(masked_originals)
-        masked_slices = torch.stack(masked_slices)
+        masked_originals = torch.cat(masked_originals, dim=0)
+        masked_slices = torch.cat(masked_slices, dim=0)
 
-        slice_count = masked_slices.shape[1]
-        masked_slices = masked_slices.view(batch_size * slice_count, height, width).unsqueeze(1)
-        masked_originals = masked_originals.view(batch_size * slice_count, height, width).unsqueeze(1)
+        seq_len = masked_slices.shape[0]
+        masked_slices = masked_slices.view(seq_len, 1, height, width)
+        masked_originals = masked_originals.unsqueeze(1)
 
-        result = {"loss": self.criterion(masked_slices, masked_originals).sum()}
+        result = {"loss": torch.abs(self.criterion(masked_slices, masked_originals).sum())}
         if self.ocr:
-            unmasked_slices = torch.stack(unmasked_slices)
-            slice_count = unmasked_slices.shape[1]
-            unmasked_slices = unmasked_slices.view(batch_size * slice_count, 1, height, width)
+            unmasked_slices = torch.cat(unmasked_slices, dim=0)
+            seq_len = unmasked_slices.shape[0]
+            unmasked_slices = unmasked_slices.view(seq_len, 1, height, width)
             result["ctc_loss"] = compute_ctc_loss(
                 self.ctc_criterion, self.ocr, unmasked_slices, unmasked_texts, self.char2int_dict
             )
@@ -112,7 +108,7 @@ class Pretrain(nn.Module):
             plt.imshow(orig.squeeze(0).cpu().detach().numpy())
             plt.title("Original image")
             plt.suptitle(f"Iteration #{self.iter+1}")
-            plt.figtext(0.5, 0.1, f"Loss = {result['loss']}", ha='center')
+            plt.figtext(0.5, 0.1, f"Loss = {result['loss']}", ha="center")
             plt.show()
         self.iter += 1
 
