@@ -106,7 +106,7 @@ class AugmentationText:
         clusters = LetterAugmentation(cluster_symbols)
         leet = LetterAugmentation(leet_symbols)
         swap = SwapAugmentation()
-        self.augmentations = [diacritics, clusters, leet, spaces, swap]
+        self.augmentations = np.array([diacritics, clusters, leet, spaces, swap])
         self.augmentations_probas = [0.3, 0.3, 0.3, 0.05, 0.05]  # sum must be equal to 1
 
     def __call__(self, text: str, proba_per_text=0.8, expected_words=3, expected_chars=2, max_count_augm=2) -> str:
@@ -122,7 +122,7 @@ class AugmentationText:
             if replace:
                 number_augmentations = np.random.choice(range(1, max_count_augm + 1))
                 random_augmentations = np.random.choice(
-                    self.augmentations, number_augmentations, p=self.augmentations_probas
+                    self.augmentations, number_augmentations, p=self.augmentations_probas, replace=False
                 )
                 proba_per_char = expected_chars / len(word)
                 for augmentation in random_augmentations:
