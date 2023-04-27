@@ -100,10 +100,11 @@ class AugmentationText:
     """
     Generates a noisy text with given parameters:
     text - original text to which word augmentations are applied
-    proba_per_text - probability of noise for a given text
-    expected_words - expected value (average) of words in every text that we want to make noisy
-    expected_chars - expected value of chars in a word that we want to make noisy
-    max_count_augm - maximum value of augmentations that can be applied to every word
+    proba_per_text - probability of noise for a given text;
+    
+    EXPECTED_WORDS - expected value (average) of words in every text that we want to make noisy
+    EXPECTED_CHARS - expected value of chars in a word that we want to make noisy
+    MAX_COUNT_AUGM - maximum value of augmentations that can be applied to every word
     """
 
     def __init__(self, leet_symbols: dict, cluster_symbols: dict, proba_per_text: float):
