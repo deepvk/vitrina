@@ -98,10 +98,9 @@ class SpaceAugmentation(AugmentationWord):
 
 class AugmentationText:
     """
-    Generates a noisy text with given parameters:
+    Generates a noisy text:
     text - original text to which word augmentations are applied
     proba_per_text - probability of noise for a given text;
-    
     EXPECTED_WORDS - expected value (average) of words in every text that we want to make noisy
     EXPECTED_CHARS - expected value of chars in a word that we want to make noisy
     MAX_COUNT_AUGM - maximum value of augmentations that can be applied to every word
