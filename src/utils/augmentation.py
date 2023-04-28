@@ -44,7 +44,9 @@ class SimilarCharAugmentation(AugmentationWord):
 
     def __call__(self, word: str) -> str:
         symbols = []
-        proba_per_char = self.expected_number_of_chars / len(word) if len(word) >= self.expected_number_of_chars else 0.5
+        proba_per_char = (
+            self.expected_number_of_chars / len(word) if len(word) >= self.expected_number_of_chars else 0.5
+        )
 
         for ch in word:
             replace = np.random.binomial(1, proba_per_char)
@@ -67,7 +69,9 @@ class DiacriticsAugmentation(AugmentationWord):
 
     def __call__(self, word: str) -> str:
         symbols = []
-        proba_per_char = self.expected_number_of_chars / len(word) if len(word) >= self.expected_number_of_chars else 0.5
+        proba_per_char = (
+            self.expected_number_of_chars / len(word) if len(word) >= self.expected_number_of_chars else 0.5
+        )
         for ch in word:
             replace = np.random.binomial(1, proba_per_char)
             if replace:
@@ -91,7 +95,9 @@ class SpaceAugmentation(AugmentationWord):
 
     def __call__(self, word: str) -> str:
         symbols = []
-        proba_per_char = self.expected_number_of_chars / len(word) if len(word) >= self.expected_number_of_chars else 0.5
+        proba_per_char = (
+            self.expected_number_of_chars / len(word) if len(word) >= self.expected_number_of_chars else 0.5
+        )
         for ch in word:
             replace = np.random.binomial(1, proba_per_char)
             if replace:
