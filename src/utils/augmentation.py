@@ -3,8 +3,8 @@ import numpy as np
 
 from abc import abstractmethod, ABC
 
-EXPECTED_WORDS = 2
-EXPECTED_CHARS = 3
+EXPECTED_NUMBER_OF_WORDS = 2
+EXPECTED_NUMBER_OF_CHARS = 3
 MAX_COUNT_AUGM = 2
 
 
@@ -38,14 +38,15 @@ class SimilarCharAugmentation(AugmentationWord):
     with a given probability
     """
 
-    def __init__(self, letters: dict, proba_per_char: float):
+    def __init__(self, letters: dict, expected_number_of_chars: float):
         self.letters = letters
-        self.proba_per_char = proba_per_char
+        self.expected_number_of_chars = expected_number_of_chars
 
     def __call__(self, word: str) -> str:
         symbols = []
+        proba_per_char = self.expected_number_of_chars / len(word)
         for ch in word:
-            replace = np.random.binomial(1, self.proba_per_char)
+            replace = np.random.binomial(1, proba_per_char)
             if replace and ch in self.letters.keys() and len(self.letters[ch]) != 0:
                 random_symb = random.choice(self.letters[ch])
                 symbols.append(random_symb)
@@ -59,14 +60,15 @@ class DiacriticsAugmentation(AugmentationWord):
     Adds diacritics to chars of the word with a given probability
     """
 
-    def __init__(self, proba_per_char: float, count_adds: int = 1):
-        self.proba_per_char = proba_per_char
+    def __init__(self, expected_number_of_chars: float, count_adds: int = 1):
+        self.expected_number_of_chars = expected_number_of_chars
         self.count_adds = count_adds
 
     def __call__(self, word: str) -> str:
         symbols = []
+        proba_per_char = self.expected_number_of_chars / len(word)
         for ch in word:
-            replace = np.random.binomial(1, self.proba_per_char)
+            replace = np.random.binomial(1, proba_per_char)
             if replace:
                 char_with_diac = ch
                 for i in range(self.count_adds):
@@ -83,13 +85,14 @@ class SpaceAugmentation(AugmentationWord):
     Adds spaces to chars of the word with a given probability
     """
 
-    def __init__(self, proba_per_char: float):
-        self.proba_per_char = proba_per_char
+    def __init__(self, expected_number_of_chars: float):
+        self.expected_number_of_chars = expected_number_of_chars
 
     def __call__(self, word: str) -> str:
         symbols = []
+        proba_per_char = self.expected_number_of_chars / len(word)
         for ch in word:
-            replace = np.random.binomial(1, self.proba_per_char)
+            replace = np.random.binomial(1, proba_per_char)
             if replace:
                 symbols.append(" ")
             symbols.append(ch)
@@ -98,19 +101,23 @@ class SpaceAugmentation(AugmentationWord):
 
 class AugmentationText:
     """
-    Generates a noisy text:
+    Generates a noisy text with given parameters:
     text - original text to which word augmentations are applied
     proba_per_text - probability of noise for a given text;
-    EXPECTED_WORDS - expected value (average) of words in every text that we want to make noisy
-    EXPECTED_CHARS - expected value of chars in a word that we want to make noisy
+    EXPECTED_NUMBER_OF_WORDS - expected value (average) of words in every text that we want to make noisy
+    EXPECTED_NUMBER_OF_CHARS - expected value of chars in a word that we want to make noisy
     MAX_COUNT_AUGM - maximum value of augmentations that can be applied to every word
     """
 
     def __init__(self, leet_symbols: dict, cluster_symbols: dict, proba_per_text: float):
+        diacritics = DiacriticsAugmentation(EXPECTED_NUMBER_OF_CHARS)
+        clusters = SimilarCharAugmentation(cluster_symbols, EXPECTED_NUMBER_OF_CHARS)
+        leet = SimilarCharAugmentation(leet_symbols, EXPECTED_NUMBER_OF_CHARS)
+        spaces = SpaceAugmentation(EXPECTED_NUMBER_OF_CHARS)
+        swap = SwapAugmentation()
+        self.augmentations = np.array([diacritics, clusters, leet, spaces, swap])
         self.augmentations_probas = [0.3, 0.3, 0.3, 0.05, 0.05]  # sum must be equal to 1
         self.proba_per_text = proba_per_text
-        self.cluster_symbols = cluster_symbols
-        self.leet_symbols = leet_symbols
 
     def __call__(self, text: str) -> str:
         need_to_replace = np.random.binomial(1, self.proba_per_text)
@@ -120,20 +127,15 @@ class AugmentationText:
         words = text.split()
         result = ""
 
-        proba_per_word = EXPECTED_WORDS / len(words)
+        proba_per_word = EXPECTED_NUMBER_OF_WORDS / len(words)
         for word in words:
+            if len(word) == 0:
+                continue
             replace = np.random.binomial(1, proba_per_word)
             if replace:
                 number_augmentations = np.random.choice(range(1, MAX_COUNT_AUGM + 1))
-                proba_per_char = EXPECTED_CHARS / len(word)
-                diacritics = DiacriticsAugmentation(proba_per_char)
-                clusters = SimilarCharAugmentation(self.cluster_symbols, proba_per_char)
-                leet = SimilarCharAugmentation(self.leet_symbols, proba_per_char)
-                spaces = SpaceAugmentation(proba_per_char)
-                swap = SwapAugmentation()
-                augmentations = np.array([diacritics, clusters, leet, spaces, swap])
                 random_augmentations = np.random.choice(
-                    augmentations, number_augmentations, p=self.augmentations_probas, replace=False
+                    self.augmentations, number_augmentations, p=self.augmentations_probas, replace=False
                 )
                 for augmentation in random_augmentations:
                     word = augmentation(word)
