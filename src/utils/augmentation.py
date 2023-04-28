@@ -44,7 +44,8 @@ class SimilarCharAugmentation(AugmentationWord):
 
     def __call__(self, word: str) -> str:
         symbols = []
-        proba_per_char = self.expected_number_of_chars / len(word)
+        proba_per_char = self.expected_number_of_chars / len(word) if len(word) >= EXPECTED_NUMBER_OF_CHARS else 0.5
+
         for ch in word:
             replace = np.random.binomial(1, proba_per_char)
             if replace and ch in self.letters.keys() and len(self.letters[ch]) != 0:
@@ -66,7 +67,7 @@ class DiacriticsAugmentation(AugmentationWord):
 
     def __call__(self, word: str) -> str:
         symbols = []
-        proba_per_char = self.expected_number_of_chars / len(word)
+        proba_per_char = self.expected_number_of_chars / len(word) if len(word) >= EXPECTED_NUMBER_OF_CHARS else 0.5
         for ch in word:
             replace = np.random.binomial(1, proba_per_char)
             if replace:
@@ -90,7 +91,7 @@ class SpaceAugmentation(AugmentationWord):
 
     def __call__(self, word: str) -> str:
         symbols = []
-        proba_per_char = self.expected_number_of_chars / len(word)
+        proba_per_char = self.expected_number_of_chars / len(word) if len(word) >= EXPECTED_NUMBER_OF_CHARS else 0.5
         for ch in word:
             replace = np.random.binomial(1, proba_per_char)
             if replace:
@@ -127,10 +128,11 @@ class AugmentationText:
         words = text.split()
         result = ""
 
-        proba_per_word = EXPECTED_NUMBER_OF_WORDS / len(words)
+        proba_per_word = EXPECTED_NUMBER_OF_WORDS / len(words) if len(words) >= EXPECTED_NUMBER_OF_WORDS else 0.5
         for word in words:
             if len(word) == 0:
                 continue
+
             replace = np.random.binomial(1, proba_per_word)
             if replace:
                 number_augmentations = np.random.choice(range(1, MAX_COUNT_AUGM + 1))
