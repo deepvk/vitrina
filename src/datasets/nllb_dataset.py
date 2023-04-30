@@ -118,6 +118,9 @@ class AugmentationDataset(IterableDataset):
             else:
                 noisy_text = self.augmentation(text)
                 yield noisy_text, label
+                
+    def get_num_classes(self):
+        return self.dataset.get_num_classes()
 
 
 class SlicesDataset(IterableDataset):
@@ -139,6 +142,9 @@ class SlicesDataset(IterableDataset):
                 slices = self.slicer(text)
                 slices = slices[: self.max_seq_len]
                 yield slices, label
+    
+    def get_num_classes(self):
+        return self.dataset.get_num_classes()
 
     def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
         slices, labels = [list(item) for item in zip(*batch)]
