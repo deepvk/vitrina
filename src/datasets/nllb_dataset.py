@@ -1,13 +1,12 @@
 import numpy as np
 import torch
 from datasets import load_dataset
+from src.utils.augmentation import AugmentationText
+from src.utils.common import clean_text
+from src.utils.slicer import VTRSlicer
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset, Dataset
 from tqdm import tqdm
-
-from src.utils.common import clean_text
-from src.utils.augmentation import AugmentationText
-from src.utils.slicer import VTRSlicer
 
 
 def collate_batch_common(slices: list[torch.Tensor], labels: list[int]):
@@ -118,7 +117,7 @@ class AugmentationDataset(IterableDataset):
             else:
                 noisy_text = self.augmentation(text)
                 yield noisy_text, label
-                
+
     def get_num_classes(self):
         return self.dataset.get_num_classes()
 
@@ -142,7 +141,7 @@ class SlicesDataset(IterableDataset):
                 slices = self.slicer(text)
                 slices = slices[: self.max_seq_len]
                 yield slices, label
-    
+
     def get_num_classes(self):
         return self.dataset.get_num_classes()
 
