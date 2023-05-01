@@ -76,7 +76,7 @@ class TransformerConfig:
 class TrainingConfig:
     max_seq_len: int = 512
     batch_size: int = 32
-    epochs: int = 10
+    steps: int = 10000
 
     lr: float = 5e-5
     warmup: int = 1000
@@ -100,7 +100,7 @@ class TrainingConfig:
     def add_to_arg_parser(cls, arg_parser: ArgumentParser) -> ArgumentParser:
         arg_parser.add_argument("--max-seq-len", type=int, default=512, help="Maximum len of tokens per sequence.")
         arg_parser.add_argument("--batch-size", type=int, default=32, help="Batch size.")
-        arg_parser.add_argument("--epochs", type=int, default=10, help="Number of epochs.")
+        arg_parser.add_argument("--steps", type=int, default=10000, help="Number of steps for training.")
         arg_parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate.")
         arg_parser.add_argument("--warmup", type=int, default=1000, help="Number of warmup steps.")
         arg_parser.add_argument("--beta1", type=float, default=0.9, help="Beta1 for Adam.")
