@@ -86,9 +86,11 @@ def train(
     pbar = tqdm(total=num_training_steps)
     batch_num = 0
     log_dict = {}
-    while True:
+    need_next_iteration = True
+    while need_next_iteration:
         for batch in train_dataloader:
             if batch_num == num_training_steps:
+                need_next_iteration = False
                 break
             model.train()
 
@@ -129,6 +131,7 @@ def train(
                     no_average=config.no_average,
                     ocr_flag=ocr_flag,
                 )
+
     pbar.close()
     logger.info("Training finished")
 
