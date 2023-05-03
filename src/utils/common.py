@@ -21,6 +21,16 @@ from torch import nn
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
 
+morph = pymorphy2.MorphAnalyzer()
+
+_MENTION_REGEXP = re.compile(r"^\[id\d*|.*\],*\s*")
+_HTML_ESCAPE_CHR_REGEXP = re.compile(r"(&quot;)|(&lt;)|(&gt;)|(&amp;)|(&apos;)")
+_HTML_CODED_CHR_REGEXP = re.compile(r"(&#\d+;)")
+_URL_REGEXP = re.compile(r"https?://(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&/=]*)")
+_BR_TOKEN_REGEXP = re.compile(r"<br>")
+_BOM_REGEXP = re.compile(r"\ufeff")
+_ZERO_WIDTH_SPACE_REGEXP = re.compile(r"\u200b")
+
 
 def text2image(text: str, font: str, font_size: int = 15) -> Image:
     image_font = ImageFont.truetype(font, max(font_size - 4, 8))
