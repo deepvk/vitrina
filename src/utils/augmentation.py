@@ -111,6 +111,14 @@ class SpaceAugmentation(AugmentationWord):
         return "".join(symbols)
 
 
+class IdAugmentation(AugmentationWord):
+    def __init__(self):
+        pass
+
+    def __call__(self, word: str) -> str:
+        return word
+
+
 class TextAugmentationWrapper:
     """
     Generates a noisy text with given parameters:
