@@ -151,3 +151,5 @@ class AugmentationConfig:
         )
 
         # some values will be added later (with training)
+
+        return arg_parser
