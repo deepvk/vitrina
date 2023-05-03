@@ -3,9 +3,8 @@ import numpy as np
 
 from abc import abstractmethod, ABC
 
-EXPECTED_NUMBER_OF_WORDS = 2
-EXPECTED_NUMBER_OF_CHARS = 3
-MAX_COUNT_AUGM = 2
+PROBA_FOR_SHORT_WORDS = 0.0
+PROBA_FOR_SHORT_TEXTS = 0.0
 
 
 class AugmentationWord(ABC):
@@ -38,23 +37,24 @@ class SimilarCharAugmentation(AugmentationWord):
     with a given probability
     """
 
-    def __init__(self, letters: dict, expected_number_of_chars: float):
+    def __init__(self, letters: dict, expected_changes_per_word: float):
         self.letters = letters
-        self.expected_number_of_chars = expected_number_of_chars
+        self.expected_changes_per_word = expected_changes_per_word
 
     def __call__(self, word: str) -> str:
-        symbols = []
+        symbols = list(word)
         proba_per_char = (
-            self.expected_number_of_chars / len(word) if len(word) >= self.expected_number_of_chars else 0.5
+            self.expected_changes_per_word / len(word)
+            if len(word) >= self.expected_changes_per_word
+            else PROBA_FOR_SHORT_WORDS
         )
 
-        for ch in word:
+        for i, ch in enumerate(symbols):
             replace = np.random.binomial(1, proba_per_char)
             if replace and ch in self.letters.keys() and len(self.letters[ch]) != 0:
-                random_symb = random.choice(self.letters[ch])
-                symbols.append(random_symb)
-            else:
-                symbols.append(ch)
+                random_symbol = random.choice(self.letters[ch])
+                symbols[i] = random_symbol
+
         return "".join(symbols)
 
 
@@ -63,25 +63,28 @@ class DiacriticsAugmentation(AugmentationWord):
     Adds diacritics to chars of the word with a given probability
     """
 
-    def __init__(self, expected_number_of_chars: float, count_adds: int = 1):
-        self.expected_number_of_chars = expected_number_of_chars
-        self.count_adds = count_adds
+    def __init__(self, expected_changes_per_word: float, diacritics_per_char: int = 1):
+        self.expected_changes_per_word = expected_changes_per_word
+        self.diacritics_per_char = diacritics_per_char
 
     def __call__(self, word: str) -> str:
-        symbols = []
+        symbols = list(word)
+
         proba_per_char = (
-            self.expected_number_of_chars / len(word) if len(word) >= self.expected_number_of_chars else 0.5
+            self.expected_changes_per_word / len(word)
+            if len(word) >= self.expected_changes_per_word
+            else PROBA_FOR_SHORT_WORDS
         )
-        for ch in word:
+        for index, ch in enumerate(symbols):
             replace = np.random.binomial(1, proba_per_char)
-            if replace:
-                char_with_diac = ch
-                for i in range(self.count_adds):
-                    randBytes = random.randint(0x300, 0x36F).to_bytes(2, "big")
-                    char_with_diac += randBytes.decode("utf-16be")
-                symbols.append(char_with_diac)
-            else:
-                symbols.append(ch)
+            if not replace:
+                continue
+            char_with_diac = ch
+            for i in range(self.diacritics_per_char):
+                randBytes = random.randint(0x300, 0x36F).to_bytes(2, "big")
+                char_with_diac += randBytes.decode("utf-16be")
+            symbols[index] = char_with_diac
+
         return "".join(symbols)
 
 
@@ -90,13 +93,15 @@ class SpaceAugmentation(AugmentationWord):
     Adds spaces to chars of the word with a given probability
     """
 
-    def __init__(self, expected_number_of_chars: float):
-        self.expected_number_of_chars = expected_number_of_chars
+    def __init__(self, expected_changes_per_word: float):
+        self.expected_changes_per_word = expected_changes_per_word
 
     def __call__(self, word: str) -> str:
         symbols = []
         proba_per_char = (
-            self.expected_number_of_chars / len(word) if len(word) >= self.expected_number_of_chars else 0.5
+            self.expected_changes_per_word / len(word)
+            if len(word) >= self.expected_changes_per_word
+            else PROBA_FOR_SHORT_WORDS
         )
         for ch in word:
             replace = np.random.binomial(1, proba_per_char)
@@ -106,25 +111,28 @@ class SpaceAugmentation(AugmentationWord):
         return "".join(symbols)
 
 
-class AugmentationText:
+class TextAugmentationWrapper:
     """
     Generates a noisy text with given parameters:
-    text - original text to which word augmentations are applied
-    proba_per_text - probability of noise for a given text;
-    EXPECTED_NUMBER_OF_WORDS - expected value (average) of words in every text that we want to make noisy
-    EXPECTED_NUMBER_OF_CHARS - expected value of chars in a word that we want to make noisy
-    MAX_COUNT_AUGM - maximum value of augmentations that can be applied to every word
+
+    :param text - original text to which word augmentations are applied
+    :param proba_per_text - probability of noise for a given text;
+    :param expected_changes_per_text - expected value (average) of words in every text that we want to make noisy
+    :param expected_changes_per_word - expected value of chars in a word that we want to make noisy
+    :param max_augmentations - maximum value of augmentations that can be applied to every word
     """
 
-    def __init__(self, leet_symbols: dict, cluster_symbols: dict, proba_per_text: float):
-        diacritics = DiacriticsAugmentation(EXPECTED_NUMBER_OF_CHARS)
-        clusters = SimilarCharAugmentation(cluster_symbols, EXPECTED_NUMBER_OF_CHARS)
-        leet = SimilarCharAugmentation(leet_symbols, EXPECTED_NUMBER_OF_CHARS)
-        spaces = SpaceAugmentation(EXPECTED_NUMBER_OF_CHARS)
-        swap = SwapAugmentation()
-        self.augmentations = np.array([diacritics, clusters, leet, spaces, swap])
-        self.augmentations_probas = [0.3, 0.3, 0.3, 0.05, 0.05]  # sum must be equal to 1
+    def __init__(
+        self,
+        augmentations: list[tuple[AugmentationWord, float]],
+        proba_per_text: float,
+        expected_changes_per_text: int = 3,
+        max_augmentations: int = 2,
+    ):
+        self.augmentations, self.probas = zip(*augmentations)
         self.proba_per_text = proba_per_text
+        self.expected_changes_per_text = expected_changes_per_text
+        self.max_augmentations = max_augmentations
 
     def __call__(self, text: str) -> str:
         need_to_replace = np.random.binomial(1, self.proba_per_text)
@@ -134,16 +142,19 @@ class AugmentationText:
         words = text.split()
         result = ""
 
-        proba_per_word = EXPECTED_NUMBER_OF_WORDS / len(words) if len(words) >= EXPECTED_NUMBER_OF_WORDS else 0.5
+        proba_per_word = (
+            self.expected_changes_per_text / len(words)
+            if len(words) >= self.expected_changes_per_text
+            else PROBA_FOR_SHORT_TEXTS
+        )
         for word in words:
             if len(word) == 0:
                 continue
 
             replace = np.random.binomial(1, proba_per_word)
             if replace:
-                number_augmentations = np.random.choice(range(1, MAX_COUNT_AUGM + 1))
                 random_augmentations = np.random.choice(
-                    self.augmentations, number_augmentations, p=self.augmentations_probas, replace=False
+                    self.augmentations, self.max_augmentations, p=self.probas, replace=False
                 )
                 for augmentation in random_augmentations:
                     word = augmentation(word)
