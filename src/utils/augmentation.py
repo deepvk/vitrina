@@ -20,9 +20,6 @@ class AugmentationWord(ABC):
 class SwapAugmentation(AugmentationWord):
     """Swap one (random) pair of adjacent characters in a given word"""
 
-    def __init__(self):
-        pass
-
     def __call__(self, word: str) -> str:
         if len(word) < 2:
             return word
@@ -79,11 +76,9 @@ class DiacriticsAugmentation(AugmentationWord):
             replace = np.random.binomial(1, proba_per_char)
             if not replace:
                 continue
-            char_with_diac = ch
             for i in range(self.diacritics_per_char):
                 randBytes = random.randint(0x300, 0x36F).to_bytes(2, "big")
-                char_with_diac += randBytes.decode("utf-16be")
-            symbols[index] = char_with_diac
+                symbols[index] += randBytes.decode("utf-16be")
 
         return "".join(symbols)
 
@@ -116,11 +111,18 @@ class IdAugmentation(AugmentationWord):
     Doesn't apply any transformation
     """
 
-    def __init__(self):
-        pass
-
     def __call__(self, word: str) -> str:
         return word
+
+
+def init_augmentations(expected_changes_per_word, cluster_symbols, leet_symbols):
+    diacritics = DiacriticsAugmentation(expected_changes_per_word)
+    clusters = SimilarCharAugmentation(cluster_symbols, expected_changes_per_word)
+    leet = SimilarCharAugmentation(leet_symbols, expected_changes_per_word)
+    spaces = SpaceAugmentation(expected_changes_per_word)
+    swap = SwapAugmentation()
+    augmentations = [(diacritics, 0.28), (clusters, 0.28), (leet, 0.28), (spaces, 0.05), (swap, 0.05)]
+    return augmentations
 
 
 class TextAugmentationWrapper:
@@ -136,12 +138,17 @@ class TextAugmentationWrapper:
 
     def __init__(
         self,
-        augmentations: list[tuple[AugmentationWord, float]],
-        proba_per_text: float,
+        cluster_symbols: dict,
+        leet_symbols: dict,
+        proba_per_text: float = 1,
+        expected_changes_per_word: int = 2,
         expected_changes_per_text: int = 3,
         max_augmentations: int = 2,
     ):
+        augmentations = init_augmentations(expected_changes_per_word, cluster_symbols, leet_symbols)
         self.augmentations, self.probas = zip(*augmentations)
+        self.augmentations += (IdAugmentation,)
+        self.probas += (1 - sum(self.probas),)
         self.proba_per_text = proba_per_text
         self.expected_changes_per_text = expected_changes_per_text
         self.max_augmentations = max_augmentations
@@ -152,24 +159,26 @@ class TextAugmentationWrapper:
             return text
 
         words = text.split()
-        result = ""
 
         proba_per_word = (
             self.expected_changes_per_text / len(words)
             if len(words) >= self.expected_changes_per_text
             else PROBA_FOR_SHORT_TEXTS
         )
-        for word in words:
+        for i, word in enumerate(words):
             if len(word) == 0:
                 continue
 
             replace = np.random.binomial(1, proba_per_word)
-            if replace:
-                random_augmentations = np.random.choice(
-                    self.augmentations, self.max_augmentations, p=self.probas, replace=False
-                )
-                for augmentation in random_augmentations:
-                    word = augmentation(word)
-            result += word + " "
+            if not replace:
+                continue
 
-        return result.strip()
+            random_augmentations = np.random.choice(
+                self.augmentations, self.max_augmentations, p=self.probas, replace=False
+            )
+            for augmentation in random_augmentations:
+                word = augmentation(word)
+
+            words[i] = word
+
+        return " ".join(words)
