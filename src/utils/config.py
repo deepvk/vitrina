@@ -124,6 +124,7 @@ class AugmentationConfig:
     expected_changes_per_word: int = 2
     expected_changes_per_text: int = 3
     max_augmentations: int = 2
+    proba_per_text: float = 0.8
 
     @classmethod
     def from_arguments(cls, args: Namespace) -> "AugmentationConfig":
@@ -150,6 +151,13 @@ class AugmentationConfig:
             type=int,
             default=2,
             help="Maximum value of augmentations that can be applied to every word.",
+        )
+
+        arg_parser.add_argument(
+            "--proba-per-text",
+            type=int,
+            default=2,
+            help="Probability of text augmentation.",
         )
 
         arg_parser.add_argument(
