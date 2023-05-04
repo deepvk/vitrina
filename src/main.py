@@ -16,8 +16,6 @@ from src.utils.train import train
 from src.models.embedders.vtr import VTREmbedder
 from src.models.embedders.ttr import TTREmbedder
 from src.models.vtr.ocr import OCRHead
-from src.models.tasks import SequenceClassifier
-
 from src.models.pretraining import Pretrain
 
 
@@ -135,16 +133,15 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             num_classes=len(char2array.keys()),
         )
 
-        # model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, char2int_dict, ocr, vtr.alpha)
         model = Pretrain(
-            vtr.font_size * vtr.window_size,
             model_config.n_head,
             model_config.num_layers,
-            "cuda",
             ocr,
             char2int,
             vtr.alpha,
             model_config.dropout,
+            vtr.font_size,
+            vtr.window_size,
         )
 
     train(

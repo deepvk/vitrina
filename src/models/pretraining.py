@@ -8,28 +8,34 @@ import matplotlib.pyplot as plt
 from src.utils.common import PositionalEncoding, compute_ctc_loss, masking
 from src.models.vtr.ocr import OCRHead
 
+GREY = 128
+
 
 class Pretrain(nn.Module):
     def __init__(
         self,
-        emb_size: int = 512,
         n_head: int = 8,
         n_layers: int = 4,
-        device: str = "cpu",
         ocr: OCRHead = None,
         char2int: dict = None,
         alpha: float = 1,
+        dropout: float = 0.1,
+        height: int = 16,
+        width: int = 32,
     ):
         super().__init__()
+        self.emb_size = height * width
         self.encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=emb_size, nhead=n_head, dim_feedforward=emb_size), num_layers=n_layers
+            nn.TransformerEncoderLayer(d_model=self.emb_size, nhead=n_head, dim_feedforward=self.emb_size),
+            num_layers=n_layers,
         )
-        self.positional_enc = PositionalEncoding(emb_size)
-        self.positional_dec = PositionalEncoding(emb_size)
+        self.positional_enc = PositionalEncoding(self.emb_size)
+        self.positional_dec = PositionalEncoding(self.emb_size)
         # self.masking = SpanMaskingGenerator(emb_size)
-        self.linear = nn.Linear(emb_size, emb_size)
+        self.linear = nn.Linear(self.emb_size, self.emb_size)
         self.decoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=emb_size, nhead=n_head, dim_feedforward=emb_size), num_layers=n_layers
+            nn.TransformerEncoderLayer(d_model=self.emb_size, nhead=n_head, dim_feedforward=self.emb_size),
+            num_layers=n_layers,
         )
         self.ocr = ocr
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
@@ -37,7 +43,6 @@ class Pretrain(nn.Module):
         self.device = device
         self.criterion = lpips.LPIPS(net="vgg").to(device)
         # self.criterion = nn.MSELoss()
-        self.emb_size = emb_size
         self.alpha = alpha
         self.iter = 0
         self.dropout = nn.Dropout(dropout)
@@ -47,7 +52,6 @@ class Pretrain(nn.Module):
         batch_size, slice_count, height, width = input_batch["slices"].shape
         slices = input_batch["slices"].view(batch_size, slice_count, height * width).clone()
 
-        grey_slice = torch.full((height, width), 128, dtype=torch.float32, device=self.device).flatten()
         masks = []
         unmasked_slices = []
         unmasked_texts = []
@@ -56,7 +60,7 @@ class Pretrain(nn.Module):
             mask = masking(not_padded_len)
             masks.append(mask)
             masked_idx = np.where(mask == 1)[0]
-            slices[i][masked_idx] = grey_slice
+            slices[i][masked_idx] = self.grey_slice
 
         slices = self.positional_enc(slices).permute(1, 0, 2)
         #slices = self.linear(slices).permute(1, 0, 2)
