@@ -1,5 +1,14 @@
 from argparse import Namespace, ArgumentParser
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
+
+from src.utils.augmentation import (
+    AugmentationWord,
+    DiacriticsAugmentation,
+    SimilarCharAugmentation,
+    SwapAugmentation,
+    SpaceAugmentation,
+    IdAugmentation,
+)
 
 
 @dataclass
@@ -119,9 +128,28 @@ class TrainingConfig:
 
 @dataclass
 class AugmentationConfig:
+    leet_symbols: dict
+    cluster_symbols: dict
     expected_changes_per_word: int = 2
     expected_changes_per_text: int = 3
     max_augmentations: int = 2
+    augmentations: list[tuple[AugmentationWord, float]] = field(init=False)  # (Augmentation, proba_of_augmentation)
+
+    def __post_init__(cls):
+        diacritics = DiacriticsAugmentation(cls.expected_changes_per_word)
+        clusters = SimilarCharAugmentation(cls.cluster_symbols, cls.expected_changes_per_word)
+        leet = SimilarCharAugmentation(cls.leet_symbols, cls.expected_changes_per_word)
+        spaces = SpaceAugmentation(cls.expected_changes_per_word)
+        swap = SwapAugmentation()
+        id = IdAugmentation()
+        cls.augmentations = [
+            (diacritics, 0.28),
+            (clusters, 0.28),
+            (leet, 0.28),
+            (spaces, 0.05),
+            (swap, 0.05),
+            (id, 0.06),
+        ]
 
     @classmethod
     def from_arguments(cls, args: Namespace) -> "AugmentationConfig":
@@ -150,6 +178,18 @@ class AugmentationConfig:
             help="Maximum value of augmentations that can be applied to every word.",
         )
 
-        # some values will be added later (with training)
+        arg_parser.add_argument(
+            "--leet",
+            type=str,
+            default="resources/nllb/letter_replacement/leet.json",
+            help="Path to leet symbols,",
+        )
+
+        arg_parser.add_argument(
+            "--clusters",
+            type=str,
+            default="resources/nllb/letter_replacement/clusters.json",
+            help="Path to cluster symbols.",
+        )
 
         return arg_parser
