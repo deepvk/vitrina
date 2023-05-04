@@ -1,14 +1,5 @@
 from argparse import Namespace, ArgumentParser
-from dataclasses import dataclass, field, fields
-
-from src.utils.augmentation import (
-    AugmentationWord,
-    DiacriticsAugmentation,
-    SimilarCharAugmentation,
-    SwapAugmentation,
-    SpaceAugmentation,
-    IdAugmentation,
-)
+from dataclasses import dataclass, fields
 
 
 @dataclass
