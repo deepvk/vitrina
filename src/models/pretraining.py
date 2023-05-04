@@ -46,6 +46,7 @@ class Pretrain(nn.Module):
         self.alpha = alpha
         self.iter = 0
         self.dropout = nn.Dropout(dropout)
+        self.register_buffer("grey_slice", torch.full((height, width), GREY, dtype=torch.float32).flatten())
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]):
 
