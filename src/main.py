@@ -142,7 +142,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             model_config.num_layers,
             "cuda",
             ocr,
-            char2int_dict,
+            char2int,
             vtr.alpha,
             model_config.dropout,
         )

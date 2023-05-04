@@ -118,14 +118,14 @@ def _set_seed(seed: int):
 
 
 def compute_ctc_loss(
-    criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char2int_dict: dict
+    criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char2int: dict
 ):
     logits = ocr(embeddings)
     log_probs = torch.nn.functional.log_softmax(logits, dim=2)
     input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
 
     chars = list("".join(np.concatenate(texts).flatten()))
-    targets = torch.LongTensor([char2int_dict[c] for c in chars])
+    targets = torch.LongTensor([char2int[c] for c in chars])
 
     get_len = np.vectorize(len)
     #target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)

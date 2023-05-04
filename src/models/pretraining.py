@@ -17,7 +17,7 @@ class Pretrain(nn.Module):
         n_layers: int = 4,
         device: str = "cpu",
         ocr: OCRHead = None,
-        char2int_dict: dict = None,
+        char2int: dict = None,
         alpha: float = 1,
     ):
         super().__init__()
@@ -33,7 +33,7 @@ class Pretrain(nn.Module):
         )
         self.ocr = ocr
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
-        self.char2int_dict = char2int_dict
+        self.char2int = char2int
         self.device = device
         self.criterion = lpips.LPIPS(net="vgg").to(device)
         # self.criterion = nn.MSELoss()
