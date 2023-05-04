@@ -112,6 +112,9 @@ class SpaceAugmentation(AugmentationWord):
 
 
 class IdAugmentation(AugmentationWord):
+    """
+    Doesn't apply any transformation
+    """
     def __init__(self):
         pass
 
