@@ -7,7 +7,7 @@ from src.datasets.vtr_dataset import VTRDataset
 from src.models.embedders.vtr import VTREmbedder
 from src.models.tasks import SequenceClassifier
 from src.utils.common import load_json
-from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig
+from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig, AugmentationConfig
 from src.utils.train import train
 from torch.utils.data import Dataset, IterableDataset
 
@@ -56,6 +56,7 @@ def train_langdetect(args: Namespace, val_data: list = None, test_data: list = N
     model_config = TransformerConfig.from_arguments(args)
     training_config = TrainingConfig.from_arguments(args)
     vtr = VTRConfig.from_arguments(args)
+    augmentation_config = AugmentationConfig.from_arguments(args)
     channels = (1, 64, 128, vtr.out_channels)
 
     embedder = VTREmbedder(
@@ -73,17 +74,14 @@ def train_langdetect(args: Namespace, val_data: list = None, test_data: list = N
     with open(args.probas, "rb") as f:
         probas = pickle.load(f)
 
-    with open(args.leet, "rb") as f:
-        leet_symbols = pickle.load(f)
-
-    with open(args.clusters, "rb") as f:
-        cluster_symbols = pickle.load(f)
-
     dataset_args = (char2array, vtr.window_size, vtr.stride, training_config.max_seq_len)
 
     nllb = NLLBDataset(probas=probas)
     augm_dataset = AugmentationDataset(
-        dataset=nllb, leet_symbols=leet_symbols, cluster_symbols=cluster_symbols, proba_per_text=0.8
+        dataset=nllb,
+        leet_symbols=augmentation_config.leet_symbols,
+        cluster_symbols=augmentation_config.cluster_symbols,
+        proba_per_text=augmentation_config.proba_per_text,
     )
     train_dataset: IterableDataset = SlicesDataset(augm_dataset, char2array)
     val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
