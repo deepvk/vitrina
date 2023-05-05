@@ -138,8 +138,6 @@ class TextAugmentationWrapper:
 
     def __init__(
         self,
-        cluster_symbols: dict,
-        leet_symbols: dict,
         augmentations: list[tuple[AugmentationWord, float]],
         proba_per_text: float = 1,
         expected_changes_per_text: int = 3,
