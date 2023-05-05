@@ -132,7 +132,7 @@ class TextAugmentationWrapper:
     :param text - original text to which word augmentations are applied
     :param proba_per_text - probability of noise for a given text;
     :param expected_changes_per_text - expected value (average) of words in every text that we want to make noisy
-    :param expected_changes_per_word - expected value of chars in a word that we want to make noisy
+    :param augmentations - augmentations of words with probabilities
     :param max_augmentations - maximum value of augmentations that can be applied to every word
     """
 
@@ -140,12 +140,11 @@ class TextAugmentationWrapper:
         self,
         cluster_symbols: dict,
         leet_symbols: dict,
+        augmentations: list[tuple[AugmentationWord, float]],
         proba_per_text: float = 1,
-        expected_changes_per_word: int = 2,
         expected_changes_per_text: int = 3,
         max_augmentations: int = 2,
     ):
-        augmentations = init_augmentations(expected_changes_per_word, cluster_symbols, leet_symbols)
         self.augmentations, self.probas = zip(*augmentations)
         self.augmentations += (IdAugmentation,)
         self.probas += (1 - sum(self.probas),)
