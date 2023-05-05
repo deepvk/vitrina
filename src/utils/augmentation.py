@@ -144,7 +144,7 @@ class TextAugmentationWrapper:
         max_augmentations: int = 2,
     ):
         self.augmentations, self.probas = zip(*augmentations)
-        self.augmentations += (IdAugmentation,)
+        self.augmentations += (IdAugmentation(),)
         self.probas += (1 - sum(self.probas),)
         self.proba_per_text = proba_per_text
         self.expected_changes_per_text = expected_changes_per_text
