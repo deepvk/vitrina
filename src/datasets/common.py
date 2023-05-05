@@ -51,7 +51,7 @@ class AugmentationDataset(IterableDataset):
         dataset: NLLBDataset,
         augmentations: list[tuple[AugmentationWord, float]],
         proba_per_text: float,
-        expected_changes_per_text: float,
+        expected_changes_per_text: int,
         max_augmentations: int,
     ):
         self.dataset = dataset
