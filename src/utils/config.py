@@ -115,3 +115,63 @@ class TrainingConfig:
             "--no-average", action="store_true", help="Do not use averaging for evaluation metrics."
         )
         return arg_parser
+
+
+@dataclass
+class AugmentationConfig:
+    leet_symbols: dict
+    cluster_symbols: dict
+    expected_changes_per_word: int = 2
+    expected_changes_per_text: int = 3
+    max_augmentations: int = 2
+    proba_per_text: float = 0.8
+
+    @classmethod
+    def from_arguments(cls, args: Namespace) -> "AugmentationConfig":
+        config_fields = [it.name for it in fields(cls)]
+        kwargs = {it: getattr(args, it) for it in config_fields}
+        return cls(**kwargs)
+
+    @classmethod
+    def add_to_arg_parser(cls, arg_parser: ArgumentParser) -> ArgumentParser:
+        arg_parser.add_argument(
+            "--expected-changes-per-word",
+            type=int,
+            default=2,
+            help="Expected value of words in every text that we want to make noisy.",
+        )
+        arg_parser.add_argument(
+            "--expected-changes-per-text",
+            type=int,
+            default=3,
+            help="Expected value of chars in a word that we want to make noisy.",
+        )
+        arg_parser.add_argument(
+            "--max-augmentations",
+            type=int,
+            default=2,
+            help="Maximum value of augmentations that can be applied to every word.",
+        )
+
+        arg_parser.add_argument(
+            "--proba-per-text",
+            type=int,
+            default=2,
+            help="Probability of text augmentation.",
+        )
+
+        arg_parser.add_argument(
+            "--leet",
+            type=str,
+            default="resources/nllb/letter_replacement/leet.json",
+            help="Path to leet symbols,",
+        )
+
+        arg_parser.add_argument(
+            "--clusters",
+            type=str,
+            default="resources/nllb/letter_replacement/clusters.json",
+            help="Path to cluster symbols.",
+        )
+
+        return arg_parser

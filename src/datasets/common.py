@@ -4,7 +4,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
 
 from src.datasets.translation_datasets import NLLBDataset
-from src.utils.augmentation import TextAugmentationWrapper
+from src.utils.augmentation import TextAugmentationWrapper, AugmentationWord
 from src.utils.slicer import VTRSlicer
 
 
@@ -46,10 +46,20 @@ def collate_batch_common(slices: list[torch.Tensor], labels: list[int]):
 
 
 class AugmentationDataset(IterableDataset):
-    def __init__(self, dataset: NLLBDataset, leet_symbols: dict, cluster_symbols: dict, proba_per_text: float):
+    def __init__(
+        self,
+        dataset: NLLBDataset,
+        augmentations: list[tuple[AugmentationWord, float]],
+        proba_per_text: float,
+        expected_changes_per_text: int,
+        max_augmentations: int,
+    ):
         self.dataset = dataset
         self.augmentation = TextAugmentationWrapper(
-            leet_symbols=leet_symbols, cluster_symbols=cluster_symbols, proba_per_text=proba_per_text
+            augmentations=augmentations,
+            proba_per_text=proba_per_text,
+            expected_changes_per_text=expected_changes_per_text,
+            max_augmentations=max_augmentations,
         )
 
     def __iter__(self):
@@ -73,7 +83,12 @@ class AugmentationDataset(IterableDataset):
 
 class SlicesDataset(IterableDataset):
     def __init__(
-        self, dataset: NLLBDataset, char2array: dict, window_size: int = 32, stride: int = 5, max_seq_len: int = 512
+        self,
+        dataset: AugmentationDataset,
+        char2array: dict,
+        window_size: int = 32,
+        stride: int = 5,
+        max_seq_len: int = 512,
     ):
         self.dataset = dataset
         self.max_seq_len = max_seq_len
