@@ -12,10 +12,8 @@ import ujson
 from PIL import ImageFont, Image, ImageDraw
 from loguru import logger
 from torch import nn
-from torch.nn.utils.rnn import pad_sequence
 
 from src.models.vtr.ocr import OCRHead
-
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -141,32 +139,39 @@ def compute_ctc_loss(
     return ctc_loss
 
 
-def masking(num_patches, ratio=0.25):
-    masked_patches_idx = set()
-    neighbours_idx = set()
-    failures = 0
-    mask = np.zeros(shape=num_patches, dtype=np.int)
+def create_noise_mask(batch_size, seq_len, not_padded, noise_density=0.8, span_lens=6, min_unmasked=4):
+    # 1. Create random mask
+    rand_nums = torch.rand(batch_size, seq_len, device=not_padded.device)
+    mask = rand_nums.le(noise_density)
 
-    max_masked_patches = math.floor(num_patches * ratio)
-    if max_masked_patches == 0:
-        return mask
+    # 2. Calculate position of each mask in span
+    cum_sum = torch.cumsum(mask, dim=-1)
+    cum_sum_not_mask = torch.masked_fill(cum_sum, mask, 0)
+    mask_position = cum_sum - torch.cummax(cum_sum_not_mask, dim=-1).values
 
-    while len(masked_patches_idx) < max_masked_patches and failures < 100:
-        mask_len = random.randint(1, min(6, max_masked_patches))
-        left_patch = random.randint(0, num_patches - mask_len)
-        right_patch = left_patch + mask_len
+    # 3. Avoid too long spans
+    min_values = torch.min(span_lens * torch.ones_like(not_padded), not_padded // 2)
+    mask = torch.where(mask_position > min_values, torch.zeros_like(mask), mask)
 
-        cur_masked = set(range(left_patch, right_patch))
-        cur_neighbours = set(range(left_patch - mask_len, left_patch)).union(range(right_patch, right_patch + mask_len))
+    # 4. Ensure at least min_unmasked unmasked patches after each block
+    not_mask = ~mask
+    cum_sum_unmasked = torch.cumsum(not_mask, dim=-1)
+    cum_sum_masked = torch.masked_fill(cum_sum_unmasked, not_mask, 0)
+    unmasked_position = cum_sum_unmasked - torch.cummax(cum_sum_masked, dim=-1).values
 
-        if not cur_masked.intersection(neighbours_idx) and not cur_neighbours.intersection(masked_patches_idx):
-            masked_patches_idx.update(cur_masked)
-            neighbours_idx.update(cur_neighbours)
-            failures = 0
-        else:
-            failures += 1
+    """
+    Get indexes of the first patches of unmasked blocks. 
+    Calculate next min_unmasked-1 indexes.
+    Mark all retrieved indexes as unmasked.
+    """
+    first_unmasked_idx = torch.nonzero(unmasked_position == 1, as_tuple=True)
+    extra_idx = torch.arange(0, min_unmasked, device=unmasked_position.device).view(1, -1)
+    unmasked_spans_idx = first_unmasked_idx[1].unsqueeze(1) + extra_idx
+    unmasked_spans_idx = torch.clamp(unmasked_spans_idx, 0, unmasked_position.shape[1] - 1)
+    batch_idx = first_unmasked_idx[0].unsqueeze(1).repeat(1, min_unmasked)
 
-    mask[list(masked_patches_idx)] = 1
+    unmasked_position[batch_idx.flatten(), unmasked_spans_idx.flatten()] = 1
+    mask[unmasked_position > 0] = False
 
     return mask
 
