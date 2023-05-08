@@ -5,7 +5,7 @@ from torch.nn import CTCLoss
 import lpips
 import matplotlib.pyplot as plt
 
-from src.utils.common import PositionalEncoding, compute_ctc_loss, masking
+from src.utils.common import PositionalEncoding, compute_ctc_loss, create_noise_mask
 from src.models.vtr.ocr import OCRHead
 
 GREY = 128
@@ -40,66 +40,56 @@ class Pretrain(nn.Module):
         self.ocr = ocr
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
         self.char2int = char2int
-        self.device = device
-        self.criterion = lpips.LPIPS(net="vgg").to(device)
+        self.criterion = lpips.LPIPS(net="vgg", lpips=False)
         # self.criterion = nn.MSELoss()
         self.alpha = alpha
         self.iter = 0
         self.dropout = nn.Dropout(dropout)
-        self.register_buffer("grey_slice", torch.full((height, width), GREY, dtype=torch.float32).flatten())
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]):
 
         batch_size, slice_count, height, width = input_batch["slices"].shape
         slices = input_batch["slices"].view(batch_size, slice_count, height * width).clone()
 
-        masks = []
-        unmasked_slices = []
-        unmasked_texts = []
-        for i in range(batch_size):
-            not_padded_len = torch.sum(input_batch["attention_mask"][i], dtype=torch.int).item()
-            mask = masking(not_padded_len)
-            masks.append(mask)
-            masked_idx = np.where(mask == 1)[0]
-            slices[i][masked_idx] = self.grey_slice
+        not_padded = torch.sum(input_batch["attention_mask"], dim=1, dtype=torch.float64).view(-1, 1)
+        mask = create_noise_mask(batch_size=batch_size, seq_len=slice_count, not_padded=not_padded)
+        mask *= input_batch["attention_mask"]
+        slices.masked_fill_(mask.unsqueeze(2), GREY)
 
         slices = self.positional_enc(slices).permute(1, 0, 2)
-        #slices = self.linear(slices).permute(1, 0, 2)
-        encoded_text = self.encoder(slices, src_key_padding_mask=input_batch["attention_mask"]).permute(1, 0, 2)
+        # slices = self.linear(slices).permute(1, 0, 2)
+        encoded_text = self.encoder(slices, src_key_padding_mask=input_batch["attention_mask"].to(torch.float32)).permute(1, 0, 2)
         encoded_text = self.dropout(encoded_text)
 
-        if self.ocr:
-            for i in range(batch_size):
-                unmasked_idx = np.where(masks[i] == 0)[0]
-                unmasked_slices.append(encoded_text[i][unmasked_idx])
-                unmasked_texts.append(np.array(input_batch["texts"][i])[unmasked_idx])
-
-        encoded_text = self.positional_dec(encoded_text).permute(1, 0, 2)
-        decoded_text = self.decoder(encoded_text, src_key_padding_mask=input_batch["attention_mask"]).permute(1, 0, 2)
+        encoded_text_pos = self.positional_dec(encoded_text).permute(1, 0, 2)
+        decoded_text = self.decoder(encoded_text_pos, src_key_padding_mask=input_batch["attention_mask"].to(torch.float32)).permute(1, 0, 2)
         decoded_text = self.dropout(decoded_text)
 
-        masked_slices = []
-        masked_originals = []
-        for i in range(batch_size):
-            masked_idx = np.where(masks[i] == 1)[0]
-            masked_slices.append(decoded_text[i][masked_idx])
-            masked_originals.append(input_batch["slices"][i][masked_idx])
-        masked_originals = torch.cat(masked_originals, dim=0)
-        masked_slices = torch.cat(masked_slices, dim=0)
+        masked_slices = decoded_text[mask]
+        masked_originals = input_batch["slices"][mask]
 
         seq_len = masked_slices.shape[0]
         masked_slices = masked_slices.view(seq_len, 1, height, width)
         masked_originals = masked_originals.unsqueeze(1)
 
-        result = {"loss": torch.abs(self.criterion(masked_slices, masked_originals).sum())}
+        result = {"loss": self.criterion(masked_slices, masked_originals).sum()}
         if self.ocr:
-            unmasked_slices = torch.cat(unmasked_slices, dim=0)
+            no_mask = ~mask
+            no_mask *= input_batch["attention_mask"]
+            unmasked_slices = encoded_text[no_mask]
+            seq_len = unmasked_slices.shape[0]
+            unmasked_slices = unmasked_slices.view(seq_len, 1, height, width)
+            unmasked_texts = []
+            for i in range(batch_size):
+                unmasked_idx = np.where(no_mask[i].cpu() == 1)[0]
+                unmasked_texts.append(np.array(input_batch["texts"][i])[unmasked_idx])
             seq_len = unmasked_slices.shape[0]
             unmasked_slices = unmasked_slices.view(seq_len, 1, height, width)
             result["ctc_loss"] = compute_ctc_loss(
-                self.ctc_criterion, self.ocr, unmasked_slices, unmasked_texts, self.char2int_dict
+                self.ctc_criterion, self.ocr, unmasked_slices, unmasked_texts, self.char2int
             )
-            result["lpips_loss"] = result["loss"]
+            result["lpips_loss"] = result["loss"].clone()
+
             result["loss"] += self.alpha * result["ctc_loss"]
 
         if self.iter % 100 == 0:
