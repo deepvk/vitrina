@@ -16,12 +16,12 @@ class Pretrain(nn.Module):
         self,
         n_head: int = 8,
         n_layers: int = 4,
-        ocr: OCRHead = None,
-        char2int: dict = None,
-        alpha: float = 1,
         dropout: float = 0.1,
         height: int = 16,
         width: int = 32,
+        ocr: OCRHead = None,
+        char2int: dict = None,
+        alpha: float = 1,
     ):
         super().__init__()
         self.emb_size = height * width
