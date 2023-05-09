@@ -115,6 +115,8 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             model_config.dropout,
             vtr.font_size,
             vtr.window_size,
+            vtr.verbose,
+            vtr.save_plots,
         )
     else:
         train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
@@ -140,6 +142,8 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             model_config.dropout,
             vtr.font_size,
             vtr.window_size,
+            vtr.verbose,
+            vtr.save_plots,
             ocr,
             char2int,
             vtr.alpha,

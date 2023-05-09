@@ -4,6 +4,7 @@ import os
 import random
 import re
 from typing import Callable
+import matplotlib.pyplot as plt
 
 import numpy as np
 import pymorphy2
@@ -172,6 +173,31 @@ def create_noise_mask(batch_size, seq_len, not_padded, noise_density=0.8, span_l
     mask[unmasked_position > 0] = False
 
     return mask
+
+
+def plot_slices(
+        decoded: tuple[torch.Tensor, torch.Tensor],
+        orig: tuple[torch.Tensor, torch.Tensor],
+        iter_num: int,
+        loss: float,
+        folder_name: str = None,
+):
+    fig, axs = plt.subplots(2, 2, figsize=(4, 4))
+    axs[0, 0].imshow(decoded[0].squeeze(0).cpu().detach().numpy())
+    axs[0, 0].set_title("Decoded image 1")
+    axs[0, 1].imshow(orig[0].squeeze(0).cpu().detach().numpy())
+    axs[0, 1].set_title("Original image 1")
+    axs[1, 0].imshow(decoded[1].squeeze(0).cpu().detach().numpy())
+    axs[1, 0].set_title("Decoded image 2")
+    axs[1, 1].imshow(orig[1].squeeze(0).cpu().detach().numpy())
+    axs[1, 1].set_title("Original image 2")
+    fig.suptitle(f"Iteration #{iter_num + 1}")
+    plt.figtext(0.5, 0.1, f"Loss = {loss}", ha="center")
+
+    if folder_name:
+        file_name = str(iter_num+1) + '.png'
+        plt.savefig(os.path.join(folder_name, file_name))
+    plt.show()
 
 
 class BceLossForTokenClassification(nn.Module):

@@ -3,9 +3,10 @@ import torch
 import numpy as np
 from torch.nn import CTCLoss
 import lpips
-import matplotlib.pyplot as plt
+import datetime
+import os
 
-from src.utils.common import PositionalEncoding, compute_ctc_loss, create_noise_mask
+from src.utils.common import PositionalEncoding, compute_ctc_loss, create_noise_mask, plot_slices
 from src.models.vtr.ocr import OCRHead
 
 GREY = 128
@@ -19,6 +20,8 @@ class MaskedVisualLM(nn.Module):
         dropout: float = 0.1,
         height: int = 16,
         width: int = 32,
+        verbose: bool = True,
+        save_plots: bool = False,
         ocr: OCRHead = None,
         char2int: dict = None,
         alpha: float = 1,
@@ -45,6 +48,14 @@ class MaskedVisualLM(nn.Module):
         self.alpha = alpha
         self.iter = 0
         self.dropout = nn.Dropout(dropout)
+
+        self.verbose = verbose
+        if save_plots:
+            current_datetime = datetime.datetime.now()
+            self.folder_name = "resources/plots/" + current_datetime.strftime('%Y-%m-%d_%H-%M-%S')
+            os.makedirs(self.folder_name)
+        else:
+            self.folder_name = None
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]):
 
@@ -92,19 +103,14 @@ class MaskedVisualLM(nn.Module):
 
             result["loss"] += self.alpha * result["ctc_loss"]
 
-        if self.iter % 100 == 0:
-            plt.rcParams["figure.figsize"] = (4, 2)
-            decoded = masked_slices[0]
-            orig = masked_originals[0]
-            plt.subplot(1, 2, 1)
-            plt.imshow(decoded.squeeze(0).cpu().detach().numpy())
-            plt.title("Decoded image")
-            plt.subplot(1, 2, 2)
-            plt.imshow(orig.squeeze(0).cpu().detach().numpy())
-            plt.title("Original image")
-            plt.suptitle(f"Iteration #{self.iter+1}")
-            plt.figtext(0.5, 0.1, f"Loss = {result['loss']}", ha="center")
-            plt.show()
+        if self.iter % 100 == 0 and self.verbose:
+            plot_slices(
+                (masked_slices[0], masked_slices[-1]),
+                (masked_originals[0], masked_originals[-1]),
+                self.iter,
+                result["loss"],
+                self.folder_name,
+            )
         self.iter += 1
 
         return result
