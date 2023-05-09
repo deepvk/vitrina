@@ -11,7 +11,7 @@ from src.models.vtr.ocr import OCRHead
 GREY = 128
 
 
-class Pretrain(nn.Module):
+class MaskedVisualLM(nn.Module):
     def __init__(
         self,
         n_head: int = 8,

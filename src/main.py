@@ -16,7 +16,7 @@ from src.utils.train import train
 from src.models.embedders.vtr import VTREmbedder
 from src.models.embedders.ttr import TTREmbedder
 from src.models.vtr.ocr import OCRHead
-from src.models.pretraining import Pretrain
+from src.models.pretraining import MaskedVisualLM
 
 
 def configure_arg_parser() -> ArgumentParser:
@@ -109,7 +109,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
 
         # model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
-        model = Pretrain(
+        model = MaskedVisualLM(
             model_config.n_head,
             model_config.num_layers,
             model_config.dropout,
@@ -134,7 +134,7 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             num_classes=len(char2array.keys()),
         )
 
-        model = Pretrain(
+        model = MaskedVisualLM(
             model_config.n_head,
             model_config.num_layers,
             model_config.dropout,
