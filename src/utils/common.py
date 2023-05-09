@@ -195,7 +195,7 @@ def plot_slices(
     plt.figtext(0.5, 0.1, f"Loss = {loss}", ha="center")
 
     if folder_name:
-        file_name = str(iter_num+1) + ".png"
+        file_name = str(iter_num + 1) + ".png"
         plt.savefig(os.path.join(folder_name, file_name))
     plt.show()
 
