@@ -52,7 +52,7 @@ class MaskedVisualLM(nn.Module):
         self.verbose = verbose
         if save_plots:
             current_datetime = datetime.datetime.now()
-            self.folder_name = "resources/plots/" + current_datetime.strftime('%Y-%m-%d_%H-%M-%S')
+            self.folder_name = "resources/plots/" + current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
             os.makedirs(self.folder_name)
         else:
             self.folder_name = None
@@ -69,11 +69,15 @@ class MaskedVisualLM(nn.Module):
 
         slices = self.positional_enc(slices).permute(1, 0, 2)
         # slices = self.linear(slices).permute(1, 0, 2)
-        encoded_text = self.encoder(slices, src_key_padding_mask=input_batch["attention_mask"].to(torch.float32)).permute(1, 0, 2)
+        encoded_text = self.encoder(
+            slices, src_key_padding_mask=input_batch["attention_mask"].to(torch.float32)
+        ).permute(1, 0, 2)
         encoded_text = self.dropout(encoded_text)
 
         encoded_text_pos = self.positional_dec(encoded_text).permute(1, 0, 2)
-        decoded_text = self.decoder(encoded_text_pos, src_key_padding_mask=input_batch["attention_mask"].to(torch.float32)).permute(1, 0, 2)
+        decoded_text = self.decoder(
+            encoded_text_pos, src_key_padding_mask=input_batch["attention_mask"].to(torch.float32)
+        ).permute(1, 0, 2)
         decoded_text = self.dropout(decoded_text)
 
         masked_slices = decoded_text[mask]

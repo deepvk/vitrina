@@ -70,10 +70,7 @@ def train(
 
     logger.info(f"Using AdamW optimizer | lr: {config.lr}")
     optimizer = AdamW(
-        model.parameters(),
-        config.lr,
-        betas=(config.beta1, config.beta2),
-        weight_decay=config.weight_decay
+        model.parameters(), config.lr, betas=(config.beta1, config.beta2), weight_decay=config.weight_decay
     )
     num_training_steps = len(train_dataloader) * config.epochs
     scheduler = get_linear_schedule_with_warmup(
