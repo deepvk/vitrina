@@ -176,11 +176,11 @@ def create_noise_mask(batch_size, seq_len, not_padded, noise_density=0.8, span_l
 
 
 def plot_slices(
-        decoded: tuple[torch.Tensor, torch.Tensor],
-        orig: tuple[torch.Tensor, torch.Tensor],
-        iter_num: int,
-        loss: float,
-        folder_name: str = None,
+    decoded: tuple[torch.Tensor, torch.Tensor],
+    orig: tuple[torch.Tensor, torch.Tensor],
+    iter_num: int,
+    loss: float,
+    folder_name: str = None,
 ):
     fig, axs = plt.subplots(2, 2, figsize=(4, 4))
     axs[0, 0].imshow(decoded[0].squeeze(0).cpu().detach().numpy())
@@ -195,7 +195,7 @@ def plot_slices(
     plt.figtext(0.5, 0.1, f"Loss = {loss}", ha="center")
 
     if folder_name:
-        file_name = str(iter_num+1) + '.png'
+        file_name = str(iter_num+1) + ".png"
         plt.savefig(os.path.join(folder_name, file_name))
     plt.show()
 
