@@ -129,7 +129,6 @@ class AugmentationConfig:
     @classmethod
     def from_arguments(cls, args: Namespace) -> "AugmentationConfig":
         config_fields = [it.name for it in fields(cls)]
-        print(config_fields)
         kwargs = {it: getattr(args, it) for it in config_fields}
         return cls(**kwargs)
 
