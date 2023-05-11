@@ -74,3 +74,6 @@ class FloresDataset(Dataset):
 
     def __getitem__(self, index) -> tuple[str, int]:
         return self.data[index]["text"], self.data[index]["label"]
+
+    def __len__(self) -> int:
+        return len(self.data)
