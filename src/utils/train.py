@@ -27,6 +27,7 @@ def train(
     val_dataset: Dataset = None,
     test_dataset: Dataset = None,
     ocr_flag: bool = False,
+    lang_detect_flag: bool = False,
 ):
     logger.info(f"Fix random state: {config.random_state}")
     set_deterministic_mode(config.random_state)
@@ -35,12 +36,15 @@ def train(
     logger.info(f"Using device: {device}")
 
     logger.info(f"Create train dataloader | batch size: {config.batch_size}")
+
+    shuffle = not lang_detect_flag
+
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
         collate_fn=train_dataset.collate_function,  # type: ignore
         num_workers=config.num_workers,
-        shuffle=True,
+        shuffle=shuffle,
     )
     val_dataloader = None
     if val_dataset is not None:
@@ -67,10 +71,9 @@ def train(
     parameters_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Parameters count: {parameters_count}")
     model.to(device)
-
+    num_training_steps = config.steps
     logger.info(f"Using AdamW optimizer | lr: {config.lr}")
     optimizer = AdamW(model.parameters(), config.lr, betas=(config.beta1, config.beta2))
-    num_training_steps = len(train_dataloader) * config.epochs
     scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=config.warmup, num_training_steps=num_training_steps
     )
@@ -79,12 +82,16 @@ def train(
     wandb.init(project=WANDB_PROJECT_NAME, config=asdict(config))
     wandb.watch(model, log="gradients", log_freq=50, idx=None, log_graph=False)
 
-    logger.info(f"Start training for {config.epochs} epochs")
+    logger.info(f"Start training for {num_training_steps} steps")
     pbar = tqdm(total=num_training_steps)
     batch_num = 0
     log_dict = {}
-    for epoch in range(1, config.epochs + 1):
+    need_next_iteration = True
+    while need_next_iteration:
         for batch in train_dataloader:
+            if batch_num == num_training_steps:
+                need_next_iteration = False
+                break
             model.train()
 
             batch_num += 1
@@ -110,7 +117,7 @@ def train(
 
             wandb.log(log_dict)
 
-            pbar.desc = f"Epoch {epoch} / {config.epochs} | Train loss: {round(loss.item(), 3)}"
+            pbar.desc = f"Step {batch_num} | Train loss: {round(loss.item(), 3)}"
             pbar.update()
 
             if batch_num % config.log_every == 0 and val_dataloader is not None:
@@ -124,6 +131,7 @@ def train(
                     no_average=config.no_average,
                     ocr_flag=ocr_flag,
                 )
+
     pbar.close()
     logger.info("Training finished")
 
