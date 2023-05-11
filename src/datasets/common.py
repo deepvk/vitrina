@@ -4,7 +4,6 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
 
 from src.datasets.translation_datasets import NLLBDataset
-from src.datasets.common import AugmentationDataset
 from src.utils.augmentation import TextAugmentationWrapper, AugmentationWord
 from src.utils.slicer import VTRSlicer
 
