@@ -7,7 +7,6 @@ from src.datasets.common import AugmentationDataset, SlicesDataset
 from src.datasets.vtr_dataset import VTRDataset
 from src.models.embedders.vtr import VTREmbedder
 from src.models.tasks import SequenceClassifier
-from src.utils.common import load_json
 from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig
 from src.utils.train import train
 from torch.utils.data import Dataset, IterableDataset
@@ -15,8 +14,6 @@ from torch.utils.data import Dataset, IterableDataset
 
 def configure_arg_parser() -> ArgumentParser:
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("--val-data", type=str, default=None, help="Path to val dataset.")
-    arg_parser.add_argument("--test-data", type=str, default=None, help="Path to test dataset.")
 
     arg_parser.add_argument(
         "--char2array",
