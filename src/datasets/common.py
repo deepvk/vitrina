@@ -4,6 +4,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
 
 from src.datasets.translation_datasets import NLLBDataset
+from src.datasets.common import AugmentationDataset
 from src.utils.augmentation import TextAugmentationWrapper, AugmentationWord
 from src.utils.slicer import VTRSlicer
 
@@ -80,7 +81,7 @@ class AugmentationDataset(IterableDataset):
 class SlicesDataset(IterableDataset):
     def __init__(
         self,
-        dataset: AugmentationDataset,
+        dataset: NLLBDataset | AugmentationDataset,
         char2array: dict,
         window_size: int = 32,
         stride: int = 5,
