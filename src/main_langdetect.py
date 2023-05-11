@@ -2,7 +2,7 @@ import pickle
 from argparse import ArgumentParser, Namespace
 
 from loguru import logger
-from src.datasets.translation_datasets import NLLBDataset, FloresDataset 
+from src.datasets.translation_datasets import NLLBDataset, FloresDataset
 from src.datasets.common import AugmentationDataset, SlicesDataset
 from src.datasets.vtr_dataset import VTRDataset
 from src.models.embedders.vtr import VTREmbedder
