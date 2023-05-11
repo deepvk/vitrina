@@ -76,10 +76,6 @@ class AugmentationDataset(IterableDataset):
     def get_num_classes(self):
         return self.dataset.get_num_classes()
 
-    def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
-        slices, labels = [list(item) for item in zip(*batch)]
-        return collate_batch_common(slices, labels)
-
 
 class SlicesDataset(IterableDataset):
     def __init__(
