@@ -66,7 +66,7 @@ def train_langdetect(args: Namespace):
     lang2label = nllb.get_lang2label()
     flores_val = FloresDataset(lang2label=lang2label, split="dev")
     flores_test = FloresDataset(lang2label=lang2label, split="devtest")
-    train_dataset: IterableDataset = SlicesDataset(nllb, char2array)
+    train_dataset = SlicesDataset(nllb, char2array)
     val_dataset: Dataset = VTRDataset(flores_val.get_dataset(), *dataset_args)
     test_dataset: Dataset = VTRDataset(flores_test.get_dataset(), *dataset_args)
 
