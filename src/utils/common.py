@@ -4,6 +4,8 @@ import os
 import random
 import re
 from typing import Callable
+import matplotlib.pyplot as plt
+import wandb
 
 import numpy as np
 import pymorphy2
@@ -12,10 +14,8 @@ import ujson
 from PIL import ImageFont, Image, ImageDraw
 from loguru import logger
 from torch import nn
-from torch.nn.utils.rnn import pad_sequence
 
 from src.models.vtr.ocr import OCRHead
-
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -118,22 +118,88 @@ def _set_seed(seed: int):
 
 
 def compute_ctc_loss(
-    criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char2int_dict: dict
+    criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char2int: dict
 ):
     logits = ocr(embeddings)
     log_probs = torch.nn.functional.log_softmax(logits, dim=2)
     input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
 
     chars = list("".join(np.concatenate(texts).flatten()))
-    targets = torch.LongTensor([char2int_dict.get(c, char2int_dict["UNK"]) for c in chars])
+    targets = torch.LongTensor([char2int.get(c, char2int["UNK"]) for c in chars])
 
     get_len = np.vectorize(len)
-    target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
-
-    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
+    # target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
+    target_lengths = []
+    for arr in texts:
+        target_lengths.append(torch.from_numpy(get_len(arr)))
+    target_lengths_concat = torch.cat(target_lengths, dim=0)
+    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths_concat)
     ctc_loss /= len(texts)
 
     return ctc_loss
+
+
+def create_noise_mask(batch_size, seq_len, not_padded, noise_density=0.8, span_lens=6, min_unmasked=4):
+    # 1. Create random mask
+    rand_nums = torch.rand(batch_size, seq_len, device=not_padded.device)
+    mask = rand_nums.le(noise_density)
+
+    # 2. Calculate position of each mask in span
+    cum_sum = torch.cumsum(mask, dim=-1)
+    cum_sum_not_mask = torch.masked_fill(cum_sum, mask, 0)
+    mask_position = cum_sum - torch.cummax(cum_sum_not_mask, dim=-1).values
+
+    # 3. Avoid too long spans
+    min_values = torch.min(span_lens * torch.ones_like(not_padded), not_padded // 2)
+    mask = torch.where(mask_position > min_values, torch.zeros_like(mask), mask)
+
+    # 4. Ensure at least min_unmasked unmasked patches after each block
+    not_mask = ~mask
+    cum_sum_unmasked = torch.cumsum(not_mask, dim=-1)
+    cum_sum_masked = torch.masked_fill(cum_sum_unmasked, not_mask, 0)
+    unmasked_position = cum_sum_unmasked - torch.cummax(cum_sum_masked, dim=-1).values
+
+    """
+    Get indexes of the first patches of unmasked blocks. 
+    Calculate next min_unmasked-1 indexes.
+    Mark all retrieved indexes as unmasked.
+    """
+    first_unmasked_idx = torch.nonzero(unmasked_position == 1, as_tuple=True)
+    extra_idx = torch.arange(0, min_unmasked, device=unmasked_position.device).view(1, -1)
+    unmasked_spans_idx = first_unmasked_idx[1].unsqueeze(1) + extra_idx
+    unmasked_spans_idx = torch.clamp(unmasked_spans_idx, 0, unmasked_position.shape[1] - 1)
+    batch_idx = first_unmasked_idx[0].unsqueeze(1).repeat(1, min_unmasked)
+
+    unmasked_position[batch_idx.flatten(), unmasked_spans_idx.flatten()] = 1
+    mask[unmasked_position > 0] = False
+
+    return mask
+
+
+def plot_slices(
+    decoded: tuple[torch.Tensor, torch.Tensor],
+    orig: tuple[torch.Tensor, torch.Tensor],
+    iter_num: int,
+    loss: float,
+    folder_name: str = None,
+):
+    fig, axs = plt.subplots(2, 2, figsize=(4, 4))
+    axs[0, 0].imshow(decoded[0].squeeze(0).cpu().detach().numpy())
+    axs[0, 0].set_title("Decoded image 1")
+    axs[0, 1].imshow(orig[0].squeeze(0).cpu().detach().numpy())
+    axs[0, 1].set_title("Original image 1")
+    axs[1, 0].imshow(decoded[1].squeeze(0).cpu().detach().numpy())
+    axs[1, 0].set_title("Decoded image 2")
+    axs[1, 1].imshow(orig[1].squeeze(0).cpu().detach().numpy())
+    axs[1, 1].set_title("Original image 2")
+    fig.suptitle(f"Iteration #{iter_num + 1}")
+    plt.figtext(0.5, 0.1, f"Loss = {loss}", ha="center")
+
+    if folder_name:
+        file_name = str(iter_num + 1) + ".png"
+        plt.savefig(os.path.join(folder_name, file_name))
+        wandb.log({"Slice plots": wandb.Image(folder_name + "/" + file_name)})
+    plt.show()
 
 
 class BceLossForTokenClassification(nn.Module):
@@ -151,21 +217,14 @@ class BceLossForTokenClassification(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, hidden_size: int, dropout=0.1, max_len=512):
+    def __init__(self, hidden_size: int, max_len=512):
         super(PositionalEncoding, self).__init__()
 
-        self.dropout = nn.Dropout(p=dropout)
-
-        self.pe = nn.Parameter(torch.zeros(1, max_len, hidden_size))
-        # position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        # div_term = torch.pow(
-        #     1e4, -torch.arange(0, hidden_size, 2).float() / hidden_size
-        # )
-        # pe = torch.zeros(max_len, 1, hidden_size)
-        # pe[:,0,0::2] = torch.sin(position * div_term)
-        # pe[:,0,1::2] = torch.cos(position * div_term)
-        # self.register_buffer("pe", pe)
+        self.pos_emb = nn.Embedding(max_len, hidden_size)
+        self.register_buffer("positions", torch.arange(max_len, dtype=torch.long).reshape(1, -1))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x + self.pe[:, : x.size(1), :]
-        return self.dropout(x)
+        assert isinstance(self.positions, torch.Tensor)
+        pos_emb = self.pos_emb(self.positions[:, : x.shape[1]])  # [1, seq_len, hidden_size]
+        x = x + pos_emb
+        return x
