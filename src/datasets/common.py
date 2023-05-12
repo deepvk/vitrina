@@ -2,6 +2,7 @@ import torch
 from typing import TypedDict
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
+from transformers import BertTokenizer
 
 from src.datasets.translation_datasets import NLLBDataset
 from src.utils.augmentation import TextAugmentationWrapper, AugmentationWord
@@ -53,6 +54,8 @@ class AugmentationDataset(IterableDataset):
         proba_per_text: float,
         expected_changes_per_text: int,
         max_augmentations: int,
+        tokenizer: None | str,
+        max_seq_len: None | int,
     ):
         self.dataset = dataset
         self.augmentation = TextAugmentationWrapper(
@@ -61,6 +64,10 @@ class AugmentationDataset(IterableDataset):
             expected_changes_per_text=expected_changes_per_text,
             max_augmentations=max_augmentations,
         )
+        if tokenizer:
+            self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
+        if max_seq_len:
+            self.max_seq_len = max_seq_len
 
     def __iter__(self):
         iterator = iter(self.dataset)
