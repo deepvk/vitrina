@@ -76,6 +76,22 @@ class AugmentationDataset(IterableDataset):
     def get_num_classes(self):
         return self.dataset.get_num_classes()
 
+    def collate_function(self, batch: list[tuple[str, int]]) -> dict[str, torch.Tensor]:
+        texts = [item[0] for item in batch]
+        labels = [item[1] for item in batch]
+
+        tokenized_batch = self.tokenizer(
+            texts,
+            add_special_tokens=True,
+            max_length=self.max_seq_len,
+            truncation=True,
+            padding=True,
+            return_tensors="pt",
+        )
+        tokenized_batch["labels"] = torch.tensor(labels, dtype=torch.int64)
+
+        return tokenized_batch
+
 
 class SlicesDataset(IterableDataset):
     def __init__(
