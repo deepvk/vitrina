@@ -80,7 +80,7 @@ class TransformerConfig:
 class TrainingConfig:
     max_seq_len: int = 512
     batch_size: int = 32
-    epochs: int = 10
+    steps: int = 10000
 
     lr: float = 5e-5
     weight_decay: float = 0.01
@@ -105,7 +105,7 @@ class TrainingConfig:
     def add_to_arg_parser(cls, arg_parser: ArgumentParser) -> ArgumentParser:
         arg_parser.add_argument("--max-seq-len", type=int, default=512, help="Maximum len of tokens per sequence.")
         arg_parser.add_argument("--batch-size", type=int, default=32, help="Batch size.")
-        arg_parser.add_argument("--epochs", type=int, default=10, help="Number of epochs.")
+        arg_parser.add_argument("--steps", type=int, default=10000, help="Number of training steps.")
         arg_parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate.")
         arg_parser.add_argument("--weight-decay", type=float, default=0.01, help="Weight decay parameter.")
         arg_parser.add_argument("--warmup", type=int, default=1000, help="Number of warmup steps.")
@@ -120,4 +120,64 @@ class TrainingConfig:
         arg_parser.add_argument(
             "--no-average", action="store_true", help="Do not use averaging for evaluation metrics."
         )
+        return arg_parser
+
+
+@dataclass
+class AugmentationConfig:
+    leet: str
+    clusters: str
+    expected_changes_per_word: int = 2
+    expected_changes_per_text: int = 3
+    max_augmentations: int = 2
+    proba_per_text: float = 0.8
+
+    @classmethod
+    def from_arguments(cls, args: Namespace) -> "AugmentationConfig":
+        config_fields = [it.name for it in fields(cls)]
+        kwargs = {it: getattr(args, it) for it in config_fields}
+        return cls(**kwargs)
+
+    @classmethod
+    def add_to_arg_parser(cls, arg_parser: ArgumentParser) -> ArgumentParser:
+        arg_parser.add_argument(
+            "--expected-changes-per-word",
+            type=int,
+            default=2,
+            help="Expected value of words in every text that we want to make noisy.",
+        )
+        arg_parser.add_argument(
+            "--expected-changes-per-text",
+            type=int,
+            default=3,
+            help="Expected value of chars in a word that we want to make noisy.",
+        )
+        arg_parser.add_argument(
+            "--max-augmentations",
+            type=int,
+            default=2,
+            help="Maximum value of augmentations that can be applied to every word.",
+        )
+
+        arg_parser.add_argument(
+            "--proba-per-text",
+            type=int,
+            default=2,
+            help="Probability of text augmentation.",
+        )
+
+        arg_parser.add_argument(
+            "--leet",
+            type=str,
+            default="resources/nllb/letter_replacement/leet.json",
+            help="Path to leet symbols,",
+        )
+
+        arg_parser.add_argument(
+            "--clusters",
+            type=str,
+            default="resources/nllb/letter_replacement/clusters.pkl",
+            help="Path to cluster symbols.",
+        )
+
         return arg_parser
