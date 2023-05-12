@@ -34,7 +34,7 @@ class MaskedVisualLM(nn.Module):
         )
         self.positional_enc = PositionalEncoding(self.emb_size)
         self.positional_dec = PositionalEncoding(self.emb_size)
-        # self.masking = SpanMaskingGenerator(emb_size)
+
         self.linear = nn.Linear(self.emb_size, self.emb_size)
         self.decoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=self.emb_size, nhead=n_head, dim_feedforward=self.emb_size),
@@ -62,22 +62,20 @@ class MaskedVisualLM(nn.Module):
         batch_size, slice_count, height, width = input_batch["slices"].shape
         slices = input_batch["slices"].view(batch_size, slice_count, height * width).clone()
 
-        not_padded = torch.sum(input_batch["attention_mask"], dim=1, dtype=torch.float64).view(-1, 1)
+        not_padded = torch.sum(input_batch["attention_mask"], dim=1).view(-1, 1)
         mask = create_noise_mask(batch_size=batch_size, seq_len=slice_count, not_padded=not_padded)
-        mask *= input_batch["attention_mask"]
+        mask *= input_batch["attention_mask"] == 1
         slices.masked_fill_(mask.unsqueeze(2), GREY)
 
         slices = self.positional_enc(slices).permute(1, 0, 2)
         # slices = self.linear(slices).permute(1, 0, 2)
-        encoded_text = self.encoder(
-            slices, src_key_padding_mask=input_batch["attention_mask"].to(torch.float32)
-        ).permute(1, 0, 2)
+        encoded_text = self.encoder(slices, src_key_padding_mask=input_batch["attention_mask"]).permute(1, 0, 2)
         encoded_text = self.dropout(encoded_text)
 
         encoded_text_pos = self.positional_dec(encoded_text).permute(1, 0, 2)
-        decoded_text = self.decoder(
-            encoded_text_pos, src_key_padding_mask=input_batch["attention_mask"].to(torch.float32)
-        ).permute(1, 0, 2)
+        decoded_text = self.decoder(encoded_text_pos, src_key_padding_mask=input_batch["attention_mask"]).permute(
+            1, 0, 2
+        )
         decoded_text = self.dropout(decoded_text)
 
         masked_slices = decoded_text[mask]
@@ -90,7 +88,7 @@ class MaskedVisualLM(nn.Module):
         result = {"loss": self.criterion(masked_slices, masked_originals).sum()}
         if self.ocr:
             no_mask = ~mask
-            no_mask *= input_batch["attention_mask"]
+            no_mask *= input_batch["attention_mask"] == 1
             unmasked_slices = encoded_text[no_mask]
             seq_len = unmasked_slices.shape[0]
             unmasked_slices = unmasked_slices.view(seq_len, 1, height, width)
