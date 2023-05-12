@@ -132,8 +132,8 @@ def compute_ctc_loss(
     target_lengths = []
     for arr in texts:
         target_lengths.append(torch.from_numpy(get_len(arr)))
-    target_lengths = torch.cat(target_lengths, dim=0)
-    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths)
+    target_lengths_concat = torch.cat(target_lengths, dim=0)
+    ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths_concat)
     ctc_loss /= len(texts)
 
     return ctc_loss

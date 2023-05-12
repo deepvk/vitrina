@@ -59,9 +59,11 @@ class MaskedVisualLM(nn.Module):
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]):
 
+        assert isinstance(input_batch["slices"], torch.Tensor)
         batch_size, slice_count, height, width = input_batch["slices"].shape
         slices = input_batch["slices"].view(batch_size, slice_count, height * width).clone()
 
+        assert isinstance(input_batch["attention_mask"], torch.Tensor)
         not_padded = torch.sum(input_batch["attention_mask"], dim=1).view(-1, 1)
         mask = create_noise_mask(batch_size=batch_size, seq_len=slice_count, not_padded=not_padded)
         mask *= input_batch["attention_mask"] == 1
