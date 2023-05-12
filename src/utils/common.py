@@ -5,6 +5,7 @@ import random
 import re
 from typing import Callable
 import matplotlib.pyplot as plt
+import wandb
 
 import numpy as np
 import pymorphy2
@@ -197,6 +198,7 @@ def plot_slices(
     if folder_name:
         file_name = str(iter_num + 1) + ".png"
         plt.savefig(os.path.join(folder_name, file_name))
+        wandb.log({"Slice plots": wandb.Image(folder_name + "/" + file_name)})
     plt.show()
 
 
