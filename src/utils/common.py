@@ -224,6 +224,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("positions", torch.arange(max_len, dtype=torch.long).reshape(1, -1))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        assert isinstance(self.positions, torch.Tensor)
         pos_emb = self.pos_emb(self.positions[:, : x.shape[1]])  # [1, seq_len, hidden_size]
         x = x + pos_emb
         return x
