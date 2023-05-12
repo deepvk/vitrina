@@ -16,7 +16,7 @@ from src.utils.train import train
 from src.models.embedders.vtr import VTREmbedder
 from src.models.embedders.ttr import TTREmbedder
 from src.models.vtr.ocr import OCRHead
-from src.models.pretraining import MaskedVisualLM
+from src.models.tasks import SequenceClassifier
 
 
 def configure_arg_parser() -> ArgumentParser:
@@ -108,16 +108,8 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
         val_dataset: Dataset = VTRDataset(val_data, *dataset_args) if val_data else None
         test_dataset: Dataset = VTRDataset(test_data, *dataset_args) if test_data else None
 
-        # model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
-        model = MaskedVisualLM(
-            model_config.n_head,
-            model_config.num_layers,
-            model_config.dropout,
-            vtr.font_size,
-            vtr.window_size,
-            vtr.verbose,
-            vtr.save_plots,
-        )
+        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
+
     else:
         train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
         val_dataset = VTRDatasetOCR(val_data, ratio=vtr.ratio, *dataset_args) if val_data else None
@@ -130,24 +122,13 @@ def train_vtr_encoder(args: Namespace, train_data: list, val_data: list = None, 
             f"# classes: {len(char2array.keys())}"
         )
         ocr = OCRHead(
-            input_size=vtr.font_size,
+            input_size=vtr.out_channels * (vtr.font_size // vtr.pool_kernel_size ** (len(channels) - 1)),
             hidden_size=vtr.hidden_size_ocr,
             num_layers=vtr.num_layers_ocr,
             num_classes=len(char2array.keys()),
         )
 
-        model = MaskedVisualLM(
-            model_config.n_head,
-            model_config.num_layers,
-            model_config.dropout,
-            vtr.font_size,
-            vtr.window_size,
-            vtr.verbose,
-            vtr.save_plots,
-            ocr,
-            char2int,
-            vtr.alpha,
-        )
+        model = SequenceClassifier(model_config, embedder, training_config.max_seq_len, char2int_dict, ocr, vtr.alpha)
 
     train(
         model,
