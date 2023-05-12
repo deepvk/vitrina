@@ -72,5 +72,11 @@ class FloresDataset(Dataset):
                 text = clean_text(sentence)
                 self.data.append({"text": text, "label": current_label})
 
+    def get_dataset(self):
+        return self.data
+
     def __getitem__(self, index) -> tuple[str, int]:
         return self.data[index]["text"], self.data[index]["label"]
+
+    def __len__(self) -> int:
+        return len(self.data)

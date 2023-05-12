@@ -2,6 +2,7 @@ import torch
 from typing import TypedDict
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
+from transformers import BertTokenizer
 
 from src.datasets.translation_datasets import NLLBDataset
 from src.utils.augmentation import TextAugmentationWrapper, AugmentationWord
@@ -53,6 +54,8 @@ class AugmentationDataset(IterableDataset):
         proba_per_text: float,
         expected_changes_per_text: int,
         max_augmentations: int,
+        tokenizer: None | str,
+        max_seq_len: None | int,
     ):
         self.dataset = dataset
         self.augmentation = TextAugmentationWrapper(
@@ -61,6 +64,10 @@ class AugmentationDataset(IterableDataset):
             expected_changes_per_text=expected_changes_per_text,
             max_augmentations=max_augmentations,
         )
+        if tokenizer:
+            self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
+        if max_seq_len:
+            self.max_seq_len = max_seq_len
 
     def __iter__(self):
         iterator = iter(self.dataset)
@@ -76,15 +83,27 @@ class AugmentationDataset(IterableDataset):
     def get_num_classes(self):
         return self.dataset.get_num_classes()
 
-    def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
-        slices, labels = [list(item) for item in zip(*batch)]
-        return collate_batch_common(slices, labels)
+    def collate_function(self, batch: list[tuple[str, int]]) -> dict[str, torch.Tensor]:
+        texts = [item[0] for item in batch]
+        labels = [item[1] for item in batch]
+
+        tokenized_batch = self.tokenizer(
+            texts,
+            add_special_tokens=True,
+            max_length=self.max_seq_len,
+            truncation=True,
+            padding=True,
+            return_tensors="pt",
+        )
+        tokenized_batch["labels"] = torch.tensor(labels, dtype=torch.int64)
+
+        return tokenized_batch
 
 
 class SlicesDataset(IterableDataset):
     def __init__(
         self,
-        dataset: AugmentationDataset,
+        dataset: NLLBDataset | AugmentationDataset,
         char2array: dict,
         window_size: int = 32,
         stride: int = 5,
