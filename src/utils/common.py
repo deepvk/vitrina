@@ -217,14 +217,15 @@ class BceLossForTokenClassification(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, hidden_size: int, max_len=512):
+    def __init__(self, hidden_size: int, dropout=0.1, max_len=512):
         super(PositionalEncoding, self).__init__()
 
         self.pos_emb = nn.Embedding(max_len, hidden_size)
         self.register_buffer("positions", torch.arange(max_len, dtype=torch.long).reshape(1, -1))
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         assert isinstance(self.positions, torch.Tensor)
         pos_emb = self.pos_emb(self.positions[:, : x.shape[1]])  # [1, seq_len, hidden_size]
         x = x + pos_emb
-        return x
+        return self.dropout(x)
