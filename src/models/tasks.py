@@ -37,15 +37,16 @@ class SequenceClassifier(nn.Module):
         self.embedder = embedder
         self.ocr = ocr
         self.char2int_dict = char2int_dict
-        self.positional = PositionalEncoding(config.emb_size, config.dropout, max_position_embeddings)
+        self.positional = PositionalEncoding(config.emb_size, max_position_embeddings)
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
         self.alpha = alpha
+        self.dropout = nn.Dropout(p=config.dropout)
         self.num_classes = config.num_classes
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]) -> dict[str, torch.Tensor]:
 
         output = self.embedder(input_batch)  # batch_size, seq_len, emb_size
-        output["embeddings"] = self.positional(output["embeddings"])
+        output["embeddings"] = self.dropout(self.positional(output["embeddings"]))
         assert isinstance(input_batch["labels"], torch.Tensor)
         result = self.backbone(
             inputs_embeds=output["embeddings"], labels=input_batch["labels"].to(torch.int64)
