@@ -21,10 +21,10 @@ class SwapAugmentation(AugmentationWord):
     """Swap one (random) pair of adjacent characters in a given word"""
 
     def __call__(self, word: str) -> str:
-        if len(word) < 2:
+        if len(word) <= 2:
             return word
-
-        ind = np.random.choice(len(word) - 1)
+        
+        ind = np.random.choice(range(1, len(word) - 1))
         return word[:ind] + word[ind + 1 : ind - 1 : -1] + word[ind + 2 :]
 
 
