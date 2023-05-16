@@ -176,7 +176,7 @@ class AugmentationConfig:
         arg_parser.add_argument(
             "--clusters",
             type=str,
-            default="resources/nllb/letter_replacement/clusters.pkl",
+            default="resources/nllb/letter_replacement/clusterization.pkl",
             help="Path to cluster symbols.",
         )
 
