@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from datasets import load_dataset
 from src.utils.common import clean_text
 from torch.utils.data import IterableDataset, Dataset
@@ -51,6 +52,22 @@ class NLLBDataset(IterableDataset):
                     continue
                 label = self.lang2label[elem[0]]
                 yield text, label
+
+    def collate_function(self, batch: list[tuple[str, int]]) -> dict[str, torch.Tensor]:
+        texts = [item[0] for item in batch]
+        labels = [item[1] for item in batch]
+
+        tokenized_batch = self.tokenizer(
+            texts,
+            add_special_tokens=True,
+            max_length=self.max_seq_len,
+            truncation=True,
+            padding=True,
+            return_tensors="pt",
+        )
+        tokenized_batch["labels"] = torch.tensor(labels, dtype=torch.int64)
+
+        return tokenized_batch
 
 
 class FloresDataset(Dataset):
