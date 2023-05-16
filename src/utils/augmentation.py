@@ -115,13 +115,24 @@ class IdAugmentation(AugmentationWord):
         return word
 
 
+class DeleteCharAugmentation(AugmentationWord):
+    """
+    Deletes random symbol in a given word
+    """
+
+    def __call__(self, word: str) -> str:
+        ind = np.random.choice(len(word))
+        return word[:ind] + word[ind + 1 :]
+
+
 def init_augmentations(expected_changes_per_word, cluster_symbols, leet_symbols):
     diacritics = DiacriticsAugmentation(expected_changes_per_word)
     clusters = SimilarCharAugmentation(cluster_symbols, expected_changes_per_word)
     leet = SimilarCharAugmentation(leet_symbols, expected_changes_per_word)
     spaces = SpaceAugmentation(expected_changes_per_word)
     swap = SwapAugmentation()
-    augmentations = [(diacritics, 0.28), (clusters, 0.28), (leet, 0.28), (spaces, 0.05), (swap, 0.05)]
+    delete = DeleteCharAugmentation()
+    augmentations = [(diacritics, 0.28), (clusters, 0.28), (leet, 0.28), (spaces, 0.05), (swap, 0.05), (delete, 0.02)]
     return augmentations
 
 
