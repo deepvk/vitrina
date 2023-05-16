@@ -23,7 +23,7 @@ class SwapAugmentation(AugmentationWord):
     def __call__(self, word: str) -> str:
         if len(word) <= 2:
             return word
-        
+
         ind = np.random.choice(range(1, len(word) - 1))
         return word[:ind] + word[ind + 1 : ind - 1 : -1] + word[ind + 2 :]
 
@@ -121,6 +121,8 @@ class DeleteCharAugmentation(AugmentationWord):
     """
 
     def __call__(self, word: str) -> str:
+        print(word)
+        print(len(word))
         ind = np.random.choice(len(word))
         return word[:ind] + word[ind + 1 :]
 
@@ -162,6 +164,8 @@ class TextAugmentationWrapper:
         self.max_augmentations = max_augmentations
 
     def __call__(self, text: str) -> str:
+        if len(text) == 0:
+            return ""
         need_to_replace = np.random.binomial(1, self.proba_per_text)
         if not need_to_replace:
             return text
@@ -186,6 +190,8 @@ class TextAugmentationWrapper:
             )
             for augmentation in random_augmentations:
                 word = augmentation(word)
+                print(augmentation)
+                print(word)
 
             words[i] = word
 
