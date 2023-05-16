@@ -162,7 +162,7 @@ class AugmentationConfig:
         arg_parser.add_argument(
             "--proba-per-text",
             type=int,
-            default=2,
+            default=0.8,
             help="Probability of text augmentation.",
         )
 
