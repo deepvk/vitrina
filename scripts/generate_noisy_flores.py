@@ -18,10 +18,7 @@ def add_noise_flores(
     expected_changes_per_text,
     max_augmentations,
     save_dir,
-    split="dev",
 ):
-    assert split in ["dev", "devtest"], "Split for FLORES dataset must be dev or devtest"
-
     save_dir = os.path.join(
         save_dir, f"w{expected_changes_per_word}t{expected_changes_per_text}m{max_augmentations}p{proba_per_text}"
     )
@@ -67,12 +64,6 @@ if __name__ == "__main__":
         help="Directory for saving noisy dataset",
     )
 
-    arg_parser.add_argument(
-        "--split",
-        type=str,
-        default="dev",
-        help="Split for dataset (only dev or devtest)",
-    )
     arg_parser = AugmentationConfig.add_to_arg_parser(arg_parser)
     args = arg_parser.parse_args()
     add_noise_flores(**vars(args))
