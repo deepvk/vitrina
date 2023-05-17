@@ -66,7 +66,13 @@ def add_noise_flores(
         noisy_text = augmentation_wrapper(text)
         noisy_flores.append({"text": noisy_text, "label": elem["label"]})
 
-    save_json(noisy_flores, os.path.join(save_dir, f"flores_{split}.jsonl"))
+    save_json(
+        noisy_flores,
+        os.path.join(
+            save_dir,
+            f"flores_{split}_w{expected_changes_per_word}t{expected_changes_per_text}m{max_augmentations}p{proba_per_text}.jsonl",
+        ),
+    )
     return noisy_flores
 
 
