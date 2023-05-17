@@ -121,8 +121,6 @@ class DeleteCharAugmentation(AugmentationWord):
     """
 
     def __call__(self, word: str) -> str:
-        print(word)
-        print(len(word))
         ind = np.random.choice(len(word))
         return word[:ind] + word[ind + 1 :]
 
@@ -190,8 +188,6 @@ class TextAugmentationWrapper:
             )
             for augmentation in random_augmentations:
                 word = augmentation(word)
-                print(augmentation)
-                print(word)
 
             words[i] = word
 
