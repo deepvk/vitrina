@@ -4,7 +4,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
 from transformers import PreTrainedTokenizer
 
-from src.datasets.translation_datasets import NLLBDataset
+from src.datasets.translation_datasets import NLLBDataset, FloresDataset
 from src.utils.augmentation import TextAugmentationWrapper, AugmentationWord
 from src.utils.slicer import VTRSlicer
 
@@ -78,10 +78,10 @@ class AugmentationDataset(IterableDataset):
         return self.dataset.get_num_classes()
 
 
-class TokenizedDataset(IterableDataset):
+class TokenizedDataset:
     def __init__(
         self,
-        dataset: NLLBDataset | AugmentationDataset,
+        dataset: NLLBDataset | AugmentationDataset | FloresDataset,
         tokenizer: PreTrainedTokenizer,
         max_seq_len: int,
     ):
@@ -104,6 +104,9 @@ class TokenizedDataset(IterableDataset):
         tokenized_batch["labels"] = torch.tensor(labels, dtype=torch.int64)
 
         return tokenized_batch
+
+    def get_num_classes(self):
+        return self.dataset.get_num_classes()
 
 
 class SlicesDataset(IterableDataset):
