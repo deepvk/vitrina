@@ -7,6 +7,7 @@ from src.datasets.translation_datasets import FloresDataset
 from src.utils.augmentation import TextAugmentationWrapper, init_augmentations
 from src.utils.common import save_json
 from src.utils.config import AugmentationConfig
+from tqdm import tqdm
 
 
 def add_noise_flores(
@@ -60,7 +61,7 @@ def add_noise_flores(
         os.makedirs(save_dir)
 
     noisy_flores = []
-    for elem in flores_data:
+    for elem in tqdm(flores_data):
         text = elem["text"]
         noisy_text = augmentation_wrapper(text)
         noisy_flores.append({"text": noisy_text, "label": elem["label"]})
