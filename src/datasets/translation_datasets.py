@@ -4,7 +4,6 @@ from src.utils.common import clean_text
 from torch.utils.data import IterableDataset, Dataset
 from tqdm import tqdm
 import os
-from src.utils.common import load_json
 
 
 class NLLBDataset(IterableDataset):
