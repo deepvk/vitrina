@@ -5,12 +5,16 @@ from src.utils.common import clean_text
 from torch.utils.data import IterableDataset, Dataset
 from tqdm import tqdm
 
+from transformers import NllbTokenizer
+
 
 class NLLBDataset(IterableDataset):
     def __init__(
         self,
         probas: dict,
         k: float = 0.3,
+        tokenizer: NllbTokenizer = None,
+        max_seq_len: int = None,
     ):
         self.datasets = dict()
         self.pairs = list(probas.keys())
@@ -30,6 +34,11 @@ class NLLBDataset(IterableDataset):
 
         sum_probas = sum(self.probas)
         self.probas = [prob / sum_probas for prob in self.probas]
+
+        if tokenizer:
+            self.tokenizer = tokenizer
+        if max_seq_len:
+            self.max_seq_len = max_seq_len
 
     def get_num_classes(self):
         return len(self.lang2label)
