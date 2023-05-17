@@ -2,7 +2,7 @@ import torch
 from typing import TypedDict
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import IterableDataset
-from transformers import NllbTokenizer
+from transformers import PreTrainedTokenizer
 
 from src.datasets.translation_datasets import NLLBDataset
 from src.utils.augmentation import TextAugmentationWrapper, AugmentationWord
@@ -54,8 +54,6 @@ class AugmentationDataset(IterableDataset):
         proba_per_text: float,
         expected_changes_per_text: int,
         max_augmentations: int,
-        tokenizer: NllbTokenizer = None,
-        max_seq_len: int = None,
     ):
         self.dataset = dataset
         self.augmentation = TextAugmentationWrapper(
@@ -64,10 +62,6 @@ class AugmentationDataset(IterableDataset):
             expected_changes_per_text=expected_changes_per_text,
             max_augmentations=max_augmentations,
         )
-        if tokenizer:
-            self.tokenizer = tokenizer
-        if max_seq_len:
-            self.max_seq_len = max_seq_len
 
     def __iter__(self):
         iterator = iter(self.dataset)
@@ -82,6 +76,18 @@ class AugmentationDataset(IterableDataset):
 
     def get_num_classes(self):
         return self.dataset.get_num_classes()
+
+
+class TokenizedDataset(IterableDataset):
+    def __init__(
+        self,
+        dataset: NLLBDataset | AugmentationDataset,
+        tokenizer: PreTrainedTokenizer,
+        max_seq_len: int,
+    ):
+        self.dataset = dataset
+        self.tokenizer = tokenizer
+        self.max_seq_len = max_seq_len
 
     def collate_function(self, batch: list[tuple[str, int]]) -> dict[str, torch.Tensor]:
         texts = [item[0] for item in batch]
