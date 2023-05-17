@@ -92,10 +92,12 @@ def train_langdetect_vtr(args: Namespace, val_data: list = None, test_data: list
     flores_val = FloresDataset(lang2label=lang2label, split="dev")
     flores_test = FloresDataset(lang2label=lang2label, split="devtest")
 
+    val_dataset: Dataset
+    test_dataset: Dataset
     if args.no_augmentation:
         train_dataset = SlicesDataset(nllb, char2array)
-        val_dataset: Dataset = VTRDataset(flores_val.get_dataset(), *dataset_args)
-        test_dataset: Dataset = VTRDataset(flores_test.get_dataset(), *dataset_args)
+        val_dataset = VTRDataset(flores_val.get_dataset(), *dataset_args)
+        test_dataset = VTRDataset(flores_test.get_dataset(), *dataset_args)
     else:
         if not args.val_data and not args.test_data:
             logger.error("Need Flores noisy data files for validation and test")
@@ -126,8 +128,8 @@ def train_langdetect_vtr(args: Namespace, val_data: list = None, test_data: list
         )
 
         train_dataset = SlicesDataset(augmentation_dataset, char2array)
-        val_dataset: Dataset = VTRDataset(val_data, *dataset_args)
-        test_dataset: Dataset = VTRDataset(test_data, *dataset_args)
+        val_dataset = VTRDataset(val_data, *dataset_args)
+        test_dataset = VTRDataset(test_data, *dataset_args)
 
     model_config.num_classes = train_dataset.get_num_classes()
     model = SequenceClassifier(model_config, embedder, training_config.max_seq_len)
@@ -153,6 +155,7 @@ def train_langdetect_ttr(args: Namespace, val_data: list = None, test_data: list
         probas = pickle.load(f)
     nllb_tokenizer = NllbTokenizer.from_pretrained("facebook/nllb-200-3.3B")
 
+    train_dataset: AugmentationDataset | NLLBDataset
     if args.no_augmentation:
         nllb = NLLBDataset(probas=probas, tokenizer=nllb_tokenizer, max_seq_len=training_config.max_seq_len)
         lang2label = nllb.get_lang2label()
