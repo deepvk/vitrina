@@ -7,7 +7,6 @@ from src.datasets.common import DatasetSample
 from src.utils.common import clean_text
 
 
-
 class BERTDataset(Dataset):
     def __init__(
         self,
