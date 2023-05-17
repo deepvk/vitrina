@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from os.path import join
+import os
 
 import torch
 import wandb
@@ -85,6 +85,11 @@ def train(
     wandb.watch(model, log="gradients", log_freq=50, idx=None, log_graph=False)
 
     logger.info(f"Start training for {num_training_steps} steps")
+
+    validation_wandb_path = os.path.join(wandb.run.dir, "validation")
+    if not os.path.exists(validation_wandb_path):
+        os.makedirs(validation_wandb_path)
+
     pbar = tqdm(total=num_training_steps)
     batch_num = 0
     log_dict = {}
@@ -133,6 +138,8 @@ def train(
                     no_average=config.no_average,
                     ocr_flag=ocr_flag,
                 )
+            if batch_num % config.save_every == 0:
+                torch.save(model.state_dict(), os.path.join(validation_wandb_path, f"batch_{batch_num}.ckpt"))
 
     pbar.close()
     logger.info("Training finished")
@@ -148,7 +155,7 @@ def train(
         )
 
     logger.info(f"Saving model")
-    torch.save(model.state_dict(), join(wandb.run.dir, "last.ckpt"))
+    torch.save(model.state_dict(), os.path.join(wandb.run.dir, "last.ckpt"))
 
 
 @torch.no_grad()
