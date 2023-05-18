@@ -81,7 +81,7 @@ class AugmentationDataset(IterableDataset):
 class Tokenized:
     def __init__(
         self,
-        dataset: NLLBDataset | AugmentationDataset | FloresDataset,
+        dataset,
         tokenizer: PreTrainedTokenizer,
         max_seq_len: int,
     ):
@@ -125,7 +125,7 @@ class TokenizedDataset(Tokenized, Dataset):
 class Slices:
     def __init__(
         self,
-        dataset: NLLBDataset | AugmentationDataset | FloresDataset,
+        dataset,
         char2array: dict,
         window_size: int = 32,
         stride: int = 5,
