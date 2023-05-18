@@ -13,6 +13,7 @@ from src.datasets.common import (
     TokenizedIterableDataset,
 )
 from src.datasets.translation_datasets import NLLBDataset, FloresDataset
+from torch.utils.data import IterableDataset, Dataset
 from src.models.embedders.ttr import TTREmbedder
 from src.models.embedders.vtr import VTREmbedder
 from src.models.tasks import SequenceClassifier
@@ -86,6 +87,12 @@ def train_langdetect(args: Namespace):
     )
 
     nllb_tokenizer = NllbTokenizer.from_pretrained("facebook/nllb-200-3.3B")
+
+    train_dataset: IterableDataset | Dataset
+    val_dataset: Dataset
+    test_dataset: Dataset
+
+    embedder: TTREmbedder | VTREmbedder
 
     train_dataset = NLLBDataset(probas=probas)
     lang2label = train_dataset.get_lang2label()
