@@ -91,6 +91,7 @@ class TrainingConfig:
     device: str = None
     random_state: int = 21
     log_every: int = 1000
+    save_every: int = 20000
     num_workers: int = 1
 
     no_average: bool = False
@@ -116,6 +117,7 @@ class TrainingConfig:
         )
         arg_parser.add_argument("--random-state", type=int, default=21, help="Random state.")
         arg_parser.add_argument("--log-every", type=int, default=1000, help="Log every N steps.")
+        arg_parser.add_argument("--save-every", type=int, default=20000, help="Save model every N steps.")
         arg_parser.add_argument("--num-workers", type=int, default=1, help="Number of workers for data loaders.")
         arg_parser.add_argument(
             "--no-average", action="store_true", help="Do not use averaging for evaluation metrics."
@@ -161,8 +163,8 @@ class AugmentationConfig:
 
         arg_parser.add_argument(
             "--proba-per-text",
-            type=int,
-            default=2,
+            type=float,
+            default=0.8,
             help="Probability of text augmentation.",
         )
 
@@ -176,7 +178,7 @@ class AugmentationConfig:
         arg_parser.add_argument(
             "--clusters",
             type=str,
-            default="resources/nllb/letter_replacement/clusters.pkl",
+            default="resources/nllb/letter_replacement/clusterization.pkl",
             help="Path to cluster symbols.",
         )
 

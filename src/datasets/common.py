@@ -1,10 +1,10 @@
 import torch
 from typing import TypedDict
 from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import IterableDataset
-from transformers import BertTokenizer
+from torch.utils.data import IterableDataset, Dataset
+from transformers import PreTrainedTokenizer
 
-from src.datasets.translation_datasets import NLLBDataset
+from src.datasets.translation_datasets import NLLBDataset, FloresDataset
 from src.utils.augmentation import TextAugmentationWrapper, AugmentationWord
 from src.utils.slicer import VTRSlicer
 
@@ -54,8 +54,6 @@ class AugmentationDataset(IterableDataset):
         proba_per_text: float,
         expected_changes_per_text: int,
         max_augmentations: int,
-        tokenizer: None | str,
-        max_seq_len: None | int,
     ):
         self.dataset = dataset
         self.augmentation = TextAugmentationWrapper(
@@ -64,10 +62,6 @@ class AugmentationDataset(IterableDataset):
             expected_changes_per_text=expected_changes_per_text,
             max_augmentations=max_augmentations,
         )
-        if tokenizer:
-            self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
-        if max_seq_len:
-            self.max_seq_len = max_seq_len
 
     def __iter__(self):
         iterator = iter(self.dataset)
@@ -82,6 +76,18 @@ class AugmentationDataset(IterableDataset):
 
     def get_num_classes(self):
         return self.dataset.get_num_classes()
+
+
+class Tokenized:
+    def __init__(
+        self,
+        dataset,
+        tokenizer: PreTrainedTokenizer,
+        max_seq_len: int,
+    ):
+        self.dataset = dataset
+        self.tokenizer = tokenizer
+        self.max_seq_len = max_seq_len
 
     def collate_function(self, batch: list[tuple[str, int]]) -> dict[str, torch.Tensor]:
         texts = [item[0] for item in batch]
@@ -99,11 +105,27 @@ class AugmentationDataset(IterableDataset):
 
         return tokenized_batch
 
+    def get_num_classes(self):
+        return self.dataset.get_num_classes()
 
-class SlicesDataset(IterableDataset):
+
+class TokenizedIterableDataset(Tokenized, IterableDataset):
+    def __iter__(self):
+        yield from self.dataset.__iter__()
+
+
+class TokenizedDataset(Tokenized, Dataset):
+    def __len__(self):
+        return self.dataset.__len__()
+
+    def __getitem__(self, index):
+        return self.dataset.__getitem__(index)
+
+
+class Slices:
     def __init__(
         self,
-        dataset: NLLBDataset | AugmentationDataset,
+        dataset,
         char2array: dict,
         window_size: int = 32,
         stride: int = 5,
@@ -113,6 +135,15 @@ class SlicesDataset(IterableDataset):
         self.max_seq_len = max_seq_len
         self.slicer = VTRSlicer(char2array=char2array, window_size=window_size, stride=stride)
 
+    def get_num_classes(self):
+        return self.dataset.get_num_classes()
+
+    def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
+        slices, labels = [list(item) for item in zip(*batch)]
+        return collate_batch_common(slices, labels)
+
+
+class SlicesIterableDataset(Slices, IterableDataset):
     def __iter__(self):
         iterator = iter(self.dataset)
         while True:
@@ -125,9 +156,14 @@ class SlicesDataset(IterableDataset):
                 slices = slices[: self.max_seq_len]
                 yield slices, label
 
-    def get_num_classes(self):
-        return self.dataset.get_num_classes()
 
-    def collate_function(self, batch: list[tuple[torch.Tensor, int]]) -> dict[str, torch.Tensor]:
-        slices, labels = [list(item) for item in zip(*batch)]
-        return collate_batch_common(slices, labels)
+class SlicesDataset(Slices, Dataset):
+    def __len__(self) -> int:
+        return self.dataset.__len__()
+
+    def __getitem__(self, index) -> tuple[torch.Tensor, int]:
+        text, label = self.dataset.__getitem__(index)
+
+        slices = self.slicer(text)
+        slices = slices[: self.max_seq_len]
+        return slices, label

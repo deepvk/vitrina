@@ -1,7 +1,7 @@
 import torch
 from loguru import logger
 from torch.utils.data import Dataset
-from transformers import BertTokenizer
+from transformers import PreTrainedTokenizer
 
 from src.datasets.common import DatasetSample
 from src.utils.common import clean_text
@@ -11,7 +11,7 @@ class BERTDataset(Dataset):
     def __init__(
         self,
         labeled_texts: list[DatasetSample],
-        tokenizer: str,
+        tokenizer: PreTrainedTokenizer,
         max_seq_len: int = 512,
     ):
         logger.info(f"Initializing BERTDataset with {len(labeled_texts)} samples, use max seq len {max_seq_len}")
@@ -19,7 +19,7 @@ class BERTDataset(Dataset):
         self.max_seq_len = max_seq_len
 
         logger.info(f"Loading tokenizer from '{tokenizer}'")
-        self.tokenizer = BertTokenizer.from_pretrained(tokenizer)
+        self.tokenizer = tokenizer
 
     def __len__(self) -> int:
         return len(self.labeled_texts)

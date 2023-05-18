@@ -3,6 +3,7 @@ from datasets import load_dataset
 from src.utils.common import clean_text
 from torch.utils.data import IterableDataset, Dataset
 from tqdm import tqdm
+import os
 
 
 class NLLBDataset(IterableDataset):
@@ -54,15 +55,16 @@ class NLLBDataset(IterableDataset):
 
 
 class FloresDataset(Dataset):
-    def __init__(
-        self,
-        lang2label: dict,
-        split="dev",
-    ):
+    def __init__(self, lang2label: dict, split="dev", dataset_dir: str = None):
         assert split in ["dev", "devtest"], "Split for FLORES dataset must be dev or devtest"
         self.lang2label = lang2label
         self.langs = lang2label.keys()
-        self.dataset = load_dataset("facebook/flores", "all")[split]
+
+        if dataset_dir:
+            self.dataset = load_dataset("json", data_files=os.path.join(dataset_dir, f"{split}.jsonl"))["train"]
+        else:
+            self.dataset = load_dataset("facebook/flores", "all")[split]
+
         self.data = []
         for lang in self.langs:
             column_name = f"sentence_{lang}"
@@ -72,7 +74,7 @@ class FloresDataset(Dataset):
                 text = clean_text(sentence)
                 self.data.append({"text": text, "label": current_label})
 
-    def get_dataset(self):
+    def get_data(self):
         return self.data
 
     def __getitem__(self, index) -> tuple[str, int]:
