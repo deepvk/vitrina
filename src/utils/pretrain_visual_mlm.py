@@ -53,7 +53,7 @@ def pretrain_vtr(args: Namespace, train_data: list, val_data: list = None, test_
             model_config.dropout,
             vtr.font_size,
             vtr.window_size,
-            vtr.verbose,
+            vtr.no_verbose,
             vtr.save_plots,
         )
     else:
@@ -80,7 +80,7 @@ def pretrain_vtr(args: Namespace, train_data: list, val_data: list = None, test_
             model_config.dropout,
             vtr.font_size,
             vtr.window_size,
-            vtr.verbose,
+            vtr.no_verbose,
             vtr.save_plots,
             ocr,
             char2int,

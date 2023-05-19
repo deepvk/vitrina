@@ -10,6 +10,8 @@ from src.utils.common import PositionalEncoding, compute_ctc_loss, create_noise_
 from src.models.vtr.ocr import OCRHead
 
 GREY = 128
+MAX_COLOUR = 255
+AVER_LETTER_WIDTH = 6
 
 
 class MaskedVisualLM(nn.Module):
@@ -20,7 +22,7 @@ class MaskedVisualLM(nn.Module):
         dropout: float = 0.1,
         height: int = 16,
         width: int = 32,
-        verbose: bool = True,
+        no_verbose: bool = False,
         save_plots: bool = False,
         ocr: OCRHead = None,
         char2int: dict = None,
@@ -35,7 +37,9 @@ class MaskedVisualLM(nn.Module):
         self.positional_enc = PositionalEncoding(self.emb_size)
         self.positional_dec = PositionalEncoding(self.emb_size)
 
-        self.linear = nn.Linear(self.emb_size, self.emb_size)
+        self.emb = nn.Linear(self.emb_size, self.emb_size, bias=False)
+        self.letter_count = width // AVER_LETTER_WIDTH
+        self.linear = nn.Linear(self.emb_size, 2 * height * self.letter_count)
         self.decoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=self.emb_size, nhead=n_head, dim_feedforward=self.emb_size),
             num_layers=n_layers,
@@ -49,7 +53,7 @@ class MaskedVisualLM(nn.Module):
         self.iter = 0
         self.dropout = nn.Dropout(dropout)
 
-        self.verbose = verbose
+        self.verbose = not no_verbose
         if save_plots:
             current_datetime = datetime.datetime.now()
             self.folder_name = "resources/plots/" + current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
@@ -69,12 +73,14 @@ class MaskedVisualLM(nn.Module):
         mask *= input_batch["attention_mask"] == 1
         slices.masked_fill_(mask.unsqueeze(2), GREY)
 
+        slices /= MAX_COLOUR
+        slices = self.emb(slices)
         slices = self.positional_enc(slices).permute(1, 0, 2)
-        # slices = self.linear(slices).permute(1, 0, 2)
-        encoded_text = self.encoder(slices, src_key_padding_mask=input_batch["attention_mask"]).permute(1, 0, 2)
-        encoded_text = self.dropout(encoded_text)
 
+        encoded_text = self.encoder(slices, src_key_padding_mask=input_batch["attention_mask"]).permute(1, 0, 2)
         encoded_text_pos = self.positional_dec(encoded_text).permute(1, 0, 2)
+        encoded_text_pos = self.dropout(encoded_text_pos)
+
         decoded_text = self.decoder(encoded_text_pos, src_key_padding_mask=input_batch["attention_mask"]).permute(
             1, 0, 2
         )
@@ -91,15 +97,13 @@ class MaskedVisualLM(nn.Module):
         if self.ocr:
             no_mask = ~mask
             no_mask *= input_batch["attention_mask"] == 1
-            unmasked_slices = encoded_text[no_mask]
-            seq_len = unmasked_slices.shape[0]
-            unmasked_slices = unmasked_slices.view(seq_len, 1, height, width)
             unmasked_texts = []
             for i in range(batch_size):
                 unmasked_idx = np.where(no_mask[i].cpu() == 1)[0]
                 unmasked_texts.append(np.array(input_batch["texts"][i])[unmasked_idx])
+            unmasked_slices = self.linear(encoded_text)[no_mask]
             seq_len = unmasked_slices.shape[0]
-            unmasked_slices = unmasked_slices.view(seq_len, 1, height, width)
+            unmasked_slices = unmasked_slices.view(seq_len, 1, height, 2 * self.letter_count)
             result["ctc_loss"] = compute_ctc_loss(
                 self.ctc_criterion, self.ocr, unmasked_slices, unmasked_texts, self.char2int
             )

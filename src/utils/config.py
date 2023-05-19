@@ -16,7 +16,7 @@ class VTRConfig:
     ratio: float
     alpha: float
     max_slices_count_per_word: int = None
-    verbose: bool = True
+    no_verbose: bool = False
     save_plots: bool = False
 
     @classmethod
@@ -47,7 +47,7 @@ class VTRConfig:
         arg_parser.add_argument(
             "--max-slices-count-per-word", type=int, default=9, help="Maximum number of slices per word."
         )
-        arg_parser.add_argument("--verbose", type=bool, default=True, help="Build plots for pre-training.")
+        arg_parser.add_argument("--no-verbose", action="store_true", help="Build plots for pre-training.")
         arg_parser.add_argument("--save-plots", action="store_true", help="Save plots.")
         return arg_parser
 
