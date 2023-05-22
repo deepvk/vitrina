@@ -69,7 +69,6 @@ def train(
         )
 
     parameters_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    logger.info(f"Parameters count: {parameters_count}")
     model.to(device)
     num_training_steps = config.steps
     logger.info(f"Using AdamW optimizer | lr: {config.lr}")
@@ -83,7 +82,8 @@ def train(
 
     wandb.init(project=WANDB_PROJECT_NAME, config=asdict(config))
     wandb.watch(model, log="gradients", log_freq=50, idx=None, log_graph=False)
-    wandb.log({"parameters_count": parameters_count})
+
+    logger.info(f"Parameters count: {parameters_count}")
 
     logger.info(f"Start training for {num_training_steps} steps")
 
