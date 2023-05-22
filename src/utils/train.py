@@ -69,7 +69,6 @@ def train(
         )
 
     parameters_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    logger.info(f"Parameters count: {parameters_count}")
     model.to(device)
     num_training_steps = config.steps
     logger.info(f"Using AdamW optimizer | lr: {config.lr}")
@@ -83,6 +82,8 @@ def train(
 
     wandb.init(project=WANDB_PROJECT_NAME, config=asdict(config))
     wandb.watch(model, log="gradients", log_freq=50, idx=None, log_graph=False)
+
+    logger.info(f"Parameters count: {parameters_count}")
 
     logger.info(f"Start training for {num_training_steps} steps")
 
@@ -139,7 +140,15 @@ def train(
                     ocr_flag=ocr_flag,
                 )
             if batch_num % config.save_every == 0:
-                torch.save(model.state_dict(), os.path.join(validation_wandb_path, f"batch_{batch_num}.ckpt"))
+                torch.save(
+                    {
+                        "scheduler": scheduler.state_dict(),
+                        "model": model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "loss": loss,
+                    },
+                    os.path.join(validation_wandb_path, f"batch_{batch_num}.ckpt"),
+                )
 
     pbar.close()
     logger.info("Training finished")
@@ -155,7 +164,15 @@ def train(
         )
 
     logger.info(f"Saving model")
-    torch.save(model.state_dict(), os.path.join(wandb.run.dir, "last.ckpt"))
+    torch.save(
+        {
+            "scheduler": scheduler.state_dict(),
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "loss": loss,
+        },
+        os.path.join(wandb.run.dir, "last.ckpt"),
+    )
 
 
 @torch.no_grad()
