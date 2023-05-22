@@ -53,6 +53,7 @@ def pretrain_vtr(args: Namespace, train_data: list, val_data: list = None, test_
             model_config.dropout,
             vtr.font_size,
             vtr.window_size,
+            model_config.emb_size,
             vtr.no_verbose,
             vtr.save_plots,
         )
@@ -80,6 +81,7 @@ def pretrain_vtr(args: Namespace, train_data: list, val_data: list = None, test_
             model_config.dropout,
             vtr.font_size,
             vtr.window_size,
+            model_config.emb_size,
             vtr.no_verbose,
             vtr.save_plots,
             ocr,
