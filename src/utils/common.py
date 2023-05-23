@@ -121,6 +121,7 @@ def compute_ctc_loss(
     criterion: torch.nn.modules.loss.CTCLoss, ocr: OCRHead, embeddings: torch.Tensor, texts: list, char2int: dict
 ):
     logits = ocr(embeddings)
+    logits = logits - logits.max(dim=2, keepdim=True).values
     log_probs = torch.nn.functional.log_softmax(logits, dim=2)
     input_lengths = torch.LongTensor([log_probs.shape[0]] * log_probs.shape[1])
 
@@ -128,18 +129,16 @@ def compute_ctc_loss(
     targets = torch.LongTensor([char2int.get(c, char2int["UNK"]) for c in chars])
 
     get_len = np.vectorize(len)
-    # target_lengths = pad_sequence([torch.from_numpy(get_len(arr)) for arr in texts], batch_first=True, padding_value=0)
     target_lengths = []
     for arr in texts:
         target_lengths.append(torch.from_numpy(get_len(arr)))
     target_lengths_concat = torch.cat(target_lengths, dim=0)
     ctc_loss = criterion(log_probs, targets, input_lengths, target_lengths_concat)
-    ctc_loss /= len(texts)
 
-    return ctc_loss
+    return ctc_loss / len(texts)
 
 
-def create_noise_mask(batch_size, seq_len, not_padded, noise_density=0.8, span_lens=6, min_unmasked=4):
+def create_noise_mask(batch_size, seq_len, not_padded, noise_density=0.2, span_lens=6, min_unmasked=4):
     # 1. Create random mask
     rand_nums = torch.rand(batch_size, seq_len, device=not_padded.device)
     mask = rand_nums.le(noise_density)
@@ -192,7 +191,7 @@ def plot_slices(
     axs[1, 0].set_title("Decoded image 2")
     axs[1, 1].imshow(orig[1].squeeze(0).cpu().detach().numpy())
     axs[1, 1].set_title("Original image 2")
-    fig.suptitle(f"Iteration #{iter_num + 1}")
+    fig.suptitle(f"Iteration #{iter_num}")
     plt.figtext(0.5, 0.1, f"Loss = {loss}", ha="center")
 
     if folder_name:
