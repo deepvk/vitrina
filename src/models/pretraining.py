@@ -37,14 +37,14 @@ class MaskedVisualLM(nn.Module):
         self.positional_enc = PositionalEncoding(emb_size)
         self.positional_dec = PositionalEncoding(emb_size)
 
-        self.emb1 = nn.Linear(height * width, emb_size, bias=False)
+        self.emb = nn.Linear(height * width, emb_size, bias=False)
         self.letter_count = width // AVER_LETTER_WIDTH
         self.linear = nn.Linear(emb_size, 2 * self.letter_count * height)
         self.decoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=emb_size, nhead=n_head, dim_feedforward=emb_size),
             num_layers=n_layers,
         )
-        self.emb2 = nn.Linear(emb_size, height * width, bias=False)
+        self.head = nn.Linear(emb_size, height * width, bias=False)
         self.ocr = ocr
         self.ctc_criterion = CTCLoss(reduction="sum", zero_infinity=True)
         self.char2int = char2int
@@ -75,7 +75,7 @@ class MaskedVisualLM(nn.Module):
         slices.masked_fill_(mask.unsqueeze(2), GREY)
 
         slices /= MAX_COLOUR
-        slices = self.emb1(slices)
+        slices = self.emb(slices)
         slices = self.positional_enc(slices).permute(1, 0, 2)
 
         encoded_text = self.encoder(slices, src_key_padding_mask=input_batch["attention_mask"]).permute(1, 0, 2)
@@ -87,7 +87,7 @@ class MaskedVisualLM(nn.Module):
         )
         decoded_text = self.dropout(decoded_text)
 
-        masked_slices = self.emb2(decoded_text[mask])
+        masked_slices = self.head(decoded_text[mask])
         masked_originals = input_batch["slices"][mask]
 
         seq_len = masked_slices.shape[0]
