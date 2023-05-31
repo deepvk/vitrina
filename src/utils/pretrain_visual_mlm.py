@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 from argparse import ArgumentParser, Namespace
 
 from src.utils.config import TransformerConfig, TrainingConfig, VTRConfig
-from src.utils.train import train
+from src.utils.pretrain import train
 from src.utils.common import load_json
 from src.datasets.vtr_dataset import VTRDataset, VTRDatasetOCR
 from src.models.pretraining import MaskedVisualLM
@@ -56,6 +56,7 @@ def pretrain_vtr(args: Namespace, train_data: list, val_data: list = None, test_
             model_config.emb_size,
             vtr.no_verbose,
             vtr.save_plots,
+            training_config.random_state,
         )
     else:
         train_dataset = VTRDatasetOCR(train_data, ratio=vtr.ratio, *dataset_args)
@@ -84,6 +85,7 @@ def pretrain_vtr(args: Namespace, train_data: list, val_data: list = None, test_
             model_config.emb_size,
             vtr.no_verbose,
             vtr.save_plots,
+            training_config.random_state,
             ocr,
             char2int,
             vtr.alpha,
@@ -93,7 +95,6 @@ def pretrain_vtr(args: Namespace, train_data: list, val_data: list = None, test_
         model,
         train_dataset,
         training_config,
-        sl=False,
         val_dataset=val_dataset,
         test_dataset=test_dataset,
         ocr_flag=not args.no_ocr,
