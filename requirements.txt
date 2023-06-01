@@ -17,4 +17,3 @@ ftfy~=6.1.1
 datasets~=2.11.0
 lpips~=0.1.4
 sentencepiece~=0.1.99
-p-tqdm~=1.4.0
