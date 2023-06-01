@@ -2,8 +2,13 @@ import numpy as np
 from datasets import load_dataset
 from src.utils.common import clean_text
 from torch.utils.data import IterableDataset, Dataset
-from tqdm import tqdm
+from p_tqdm import p_map
 import os
+
+
+def get_loaded_dataset(pair):
+    dataset = load_dataset("allenai/nllb", pair, split="train", streaming=True)
+    return pair, dataset
 
 
 class NLLBDataset(IterableDataset):
@@ -13,20 +18,23 @@ class NLLBDataset(IterableDataset):
         k: float = 0.3,
     ):
         self.datasets = dict()
-        self.pairs = list(probas.keys())
+        self.pairs = list(probas.keys())[:30]
         self.probas = []
         self.lang2label: dict = {}
         self.label2lang: dict = {}
         label = 0
-        for pair in tqdm(self.pairs):
+        for pair in self.pairs:
             for lang in pair.split("-"):
                 if lang not in self.lang2label:
                     self.lang2label[lang] = label
                     self.label2lang[label] = lang
                     label += 1
-            dataset = load_dataset("allenai/nllb", pair, split="train", streaming=True)
-            self.datasets[pair] = iter(dataset)
+
             self.probas.append(probas[pair] ** k)
+
+        load_dataset("allenai/nllb", self.pairs[0], split="train", streaming=True)
+        dataset_pairs = p_map(get_loaded_dataset, self.pairs)
+        self.datasets = {pair: iter(dataset) for pair, dataset in dataset_pairs}
 
         sum_probas = sum(self.probas)
         self.probas = [prob / sum_probas for prob in self.probas]
