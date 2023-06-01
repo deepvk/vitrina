@@ -1,9 +1,14 @@
 import numpy as np
 from datasets import load_dataset
 from src.utils.common import clean_text
+from multiprocessing import Pool
 from torch.utils.data import IterableDataset, Dataset
 from tqdm import tqdm
 import os
+
+
+def load_dataset_fn(pair_name):
+    return pair_name, load_dataset("allenai/nllb", pair_name, split="train", streaming=True)
 
 
 class NLLBDataset(IterableDataset):
@@ -18,15 +23,21 @@ class NLLBDataset(IterableDataset):
         self.lang2label: dict = {}
         self.label2lang: dict = {}
         label = 0
-        for pair in tqdm(self.pairs):
+        for pair in self.pairs:
             for lang in pair.split("-"):
                 if lang not in self.lang2label:
                     self.lang2label[lang] = label
                     self.label2lang[label] = lang
                     label += 1
-            dataset = load_dataset("allenai/nllb", pair, split="train", streaming=True)
-            self.datasets[pair] = iter(dataset)
+
             self.probas.append(probas[pair] ** k)
+
+        dataset_pairs = [load_dataset_fn(self.pairs[0])]
+        with Pool() as pool:
+            results = pool.imap(load_dataset_fn, self.pairs[1:], chunksize=1)
+            for result in tqdm(results, total=len(self.pairs) - 1):
+                dataset_pairs.append(result)
+        self.datasets = {pair: iter(dataset) for pair, dataset in dataset_pairs}
 
         sum_probas = sum(self.probas)
         self.probas = [prob / sum_probas for prob in self.probas]
