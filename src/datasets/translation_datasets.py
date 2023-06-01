@@ -18,7 +18,7 @@ class NLLBDataset(IterableDataset):
         k: float = 0.3,
     ):
         self.datasets = dict()
-        self.pairs = list(probas.keys())[:30]
+        self.pairs = list(probas.keys())
         self.probas = []
         self.lang2label: dict = {}
         self.label2lang: dict = {}
