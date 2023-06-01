@@ -25,6 +25,7 @@ class MaskedVisualLM(nn.Module):
         emb_size: int = 512,
         no_verbose: bool = False,
         save_plots: bool = False,
+        seed: int = 21,
         ocr: OCRHead = None,
         char2int: dict = None,
         alpha: float = 1,
@@ -52,15 +53,20 @@ class MaskedVisualLM(nn.Module):
         # self.criterion = nn.MSELoss()
         self.alpha = alpha
         self.iter = 0
+        self.val_num = 0
         self.dropout = nn.Dropout(dropout)
 
         self.verbose = not no_verbose
         if save_plots:
             current_datetime = datetime.datetime.now()
-            self.folder_name = "resources/plots/" + current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
-            os.makedirs(self.folder_name)
+            self.train_folder_name = "resources/plots/train/" + current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+            self.val_folder_name = "resources/plots/val/" + current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+            os.makedirs(self.train_folder_name)
+            os.makedirs(self.val_folder_name)
         else:
             self.folder_name = None
+        self.first_val_batch = True
+        self.seed = seed
 
     def forward(self, input_batch: dict[str, list | torch.Tensor]):
 
@@ -70,7 +76,9 @@ class MaskedVisualLM(nn.Module):
 
         assert isinstance(input_batch["attention_mask"], torch.Tensor)
         not_padded = torch.sum(input_batch["attention_mask"], dim=1).view(-1, 1)
-        mask = create_noise_mask(batch_size=batch_size, seq_len=slice_count, not_padded=not_padded)
+        mask = create_noise_mask(
+            batch_size=batch_size, seq_len=slice_count, not_padded=not_padded, val=not self.training, seed=self.seed
+        )
         mask *= input_batch["attention_mask"] == 1
         slices.masked_fill_(mask.unsqueeze(2), GREY)
 
@@ -112,14 +120,29 @@ class MaskedVisualLM(nn.Module):
 
             result["loss"] += self.alpha * result["ctc_loss"]
 
-        if self.iter % 100 == 0 and self.verbose:
-            plot_slices(
-                (masked_slices[0], masked_slices[-1]),
-                (masked_originals[0], masked_originals[-1]),
-                self.iter,
-                result["loss"],
-                self.folder_name,
-            )
-        self.iter += 1
+        if self.training:
+            if self.iter % 100 == 0 and self.verbose:
+                plot_slices(
+                    (masked_slices[0], masked_slices[-1]),
+                    (masked_originals[0], masked_originals[-1]),
+                    result["loss"],
+                    self.iter,
+                    self.training,
+                    self.train_folder_name,
+                )
+            self.iter += 1
+            self.first_val_batch = True
+        else:
+            if self.first_val_batch and self.verbose:
+                self.first_val_batch = False
+                plot_slices(
+                    (masked_slices[0], masked_slices[-1]),
+                    (masked_originals[0], masked_originals[-1]),
+                    result["loss"],
+                    self.val_num,
+                    self.training,
+                    self.val_folder_name,
+                )
+                self.val_num += 1
 
         return result

@@ -138,8 +138,12 @@ def compute_ctc_loss(
     return ctc_loss / len(texts)
 
 
-def create_noise_mask(batch_size, seq_len, not_padded, noise_density=0.2, span_lens=6, min_unmasked=4):
+def create_noise_mask(
+    batch_size, seq_len, not_padded, noise_density=0.2, span_lens=6, min_unmasked=4, val=False, seed=21
+):
     # 1. Create random mask
+    if val:
+        torch.manual_seed(seed)
     rand_nums = torch.rand(batch_size, seq_len, device=not_padded.device)
     mask = rand_nums.le(noise_density)
 
@@ -178,8 +182,9 @@ def create_noise_mask(batch_size, seq_len, not_padded, noise_density=0.2, span_l
 def plot_slices(
     decoded: tuple[torch.Tensor, torch.Tensor],
     orig: tuple[torch.Tensor, torch.Tensor],
-    iter_num: int,
     loss: float,
+    iter_num: int,
+    training: bool,
     folder_name: str = None,
 ):
     fig, axs = plt.subplots(2, 2, figsize=(4, 4))
@@ -191,13 +196,19 @@ def plot_slices(
     axs[1, 0].set_title("Decoded image 2")
     axs[1, 1].imshow(orig[1].squeeze(0).cpu().detach().numpy())
     axs[1, 1].set_title("Original image 2")
-    fig.suptitle(f"Iteration #{iter_num}")
+    if training:
+        fig.suptitle(f"Iteration #{iter_num}")
+    else:
+        fig.suptitle(f"Validation")
     plt.figtext(0.5, 0.1, f"Loss = {loss}", ha="center")
 
     if folder_name:
         file_name = str(iter_num + 1) + ".png"
         plt.savefig(os.path.join(folder_name, file_name))
-        wandb.log({"Slice plots": wandb.Image(folder_name + "/" + file_name)})
+        if training:
+            wandb.log({"Training slice plots": wandb.Image(folder_name + "/" + file_name)})
+        else:
+            wandb.log({"Validation slice plots": wandb.Image(folder_name + "/" + file_name)})
     plt.show()
 
 
