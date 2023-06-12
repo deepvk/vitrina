@@ -55,7 +55,7 @@ def clusterizer(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--n-clusters", type=int, default=4000)
-    parser.add_argument("--save-to", type=str, default=f"resources/nllb/letter_replacement/clusterization.pkl")
+    parser.add_argument("--save-to", type=str, default="resources/nllb/letter_replacement/clusterization.pkl")
     parser.add_argument("--char2array", type=str, default="resources/char2array.pkl")
     args = parser.parse_args()
     clusterizer(**vars(args))
